@@ -123,5 +123,17 @@ Also, open the webpage for the Zenodo record:
 zotzen [...] --open
 ```
 
+# Note
+
+This tools doesn't allow you to go from Zenodo to Zotero. You've
+already got the browser plugin for Zotero, and you can easily use that
+on a Zenodo page. So not much need for this tool to go the other way.
+
+# Also note
+
+Going from Zotero json to Zenodo json is not necessarily straight
+forward. We can make some compromises here, such as manually setting
+up the Zenodo item (or using zenodo.json) and only syncing the most
+common Zotero properties (title, author, abstract, date).
 
 
