@@ -1,37 +1,108 @@
 # zotzen
 
-@a1diablo. When various import/export issues are working, let's trial this (using the https://github.com/bjohas/Zenodo-tools)
+Requires:
+- zenodo-cli from https://github.com/bjohas/Zenodo-tools
+- zotero-cli from https://github.com/edtechhub/zotero-cli
 
-**Step 1**
-```
-zotero-cli zenodo --doi --key ABC --zenodoapikey XYZ --zenodotemplate something.json
-```
-The Zotero item ABC is fetched and inspected. 
-- If there is no DOI (either in the DOI field or under 'extra'), then 
--- fetch a new record from the Zenodo user with API key XYZ. (It may be good to check whether an API key is available in default locations or as an ENV variable?) Also, add the Zotero metadata to Zenodo (title, abstract, date, authors will be sufficient; this overwrites the something.json, i.e., do a `zenodo-cli create something.json --title ABC --description DEF --date XXX`, not sure about authors.).
--- attach the resulting DOI to the Zotero record (to the DOI field or to extra if no DOI field).
-- If there is a DOI, that is a Zenodo DOI, say "A Zenodo-based API key is available and writeable."
-- If there is a non-Zotero DOI, or the Zenodo-DOI is not writable, then output a message. 
+## Setup
 
-**Step 2**
+You need to have config files set up
 ```
-zotero-cli zenodo --push --key ABC --zenodoapikey XYZ [--type pdf|all]
+zotero-cli -> zotero-cli.toml
+zenodo-cli -> config.json
 ```
-The item now has a DOI (as per Step 1.) 
-- The metadata of ABC is updated on Zenodo (as in Step 1). 
-- Also, the attachments to ABC are attached to the record
--- --type pdf (default) attached PDF files only. 
--- --type all attached all.
+
+Check whether you can log into both APIs, e.g. by running
+```
+zenodo-cli list
+zotero-cli ???
+```
+
+## Use of zotzen
+
+### Check an item
+```
+zotzen --zkey 123:ABC --show
+``` 
+
+The Zotero item with item key ABC is fetched (from group 123) and
+inspected. Output:
+```
+Zotero
+- Item key: 123:ABC
+- Title: ...
+- DOI: ...
+```
+
+If there is a DOI (either in the DOI field or under
+'extra'), and this DOI is a zenodo doi, the zenodo data is fetched. Output continues
+```
+Zenodo:
+- Item available.
+- Item status: ...
+- Title: ...
+- Item is [not] writable.
+```
+
+### Generate a DOI for a Zotero item
+```
+zotzen --zkey 123:ABC --getdoi [--template zenodo.json]
+``` 
+The Zotero item with item key ABC is fetched (from group 123) and
+inspected. If there is a DOI, then:
+
+```
+Item has DOI already: <DOI>
+```
+
+If there isn't a DOI, the item data is put into Zenodo format (basic
+use of title, abstract, date and authors only, for now). Additional fields are filled
+form the `zenodo.json` if provided. Response:
+
+```
+DOI allocated: <DOI>
+```
+
+The DOI is written to the Zotero item. I.e., ttach the resulting DOI
+to the Zotero record (to the DOI field or to extra if no DOI field).
 
 
-Also
-```
-zotero-cli zenodo [--publish] [--open]
-```
-- The Zenodo record is published if --publish
-- The Zenodo record is opened if --open
 
-The options --doi/--push/--publish/--open should be combinable.
+### Sync metadata an item
 ```
-zotero-cli zenodo --doi --key ABC --zenodoapikey XYZ --zenodotemplate something.json --push --publish --open
+zotzen --zkey 123:ABC --sync
+``` 
+
+The zotero item metadata is retrieved (as with `--show`)  and written to Zenodo (as above for `--getdoi`).
+
+
+### Push Zotero attachments to Zenodo.
+
 ```
+zotzen --zkey 123:ABC --push [--types pdf|all]
+```
+
+The attachments to ABC are attached to the record
+-- `--type pdf` (default) attached PDF files only. 
+-- `--type all` attached all.
+
+### Combinations
+The options `--getdoi`, `--sync` and `--push` can be combined.
+```
+zotzen --zkey 123:ABC --getdoi --sync --push
+```
+
+Also, publish the Zenodo record:
+
+```
+zotzen [...] --publish
+```
+
+Also, open the webpage for the Zenodo record:
+
+```
+zotzen [...] --open
+```
+
+
+
