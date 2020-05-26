@@ -4,6 +4,7 @@ Requires:
 - zenodo-cli from https://github.com/bjohas/Zenodo-tools
 - zotero-cli from https://github.com/edtechhub/zotero-cli
 
+
 ## Setup
 
 You need to have config files set up
@@ -22,7 +23,7 @@ zotero-cli ???
 
 ### Check an item
 ```
-zotzen --zkey 123:ABC --show
+zotzen --zot 123:ABC --show
 ``` 
 
 The Zotero item with item key ABC is fetched (from group 123) and
@@ -46,7 +47,7 @@ Zenodo:
 
 ### Generate a DOI for a Zotero item
 ```
-zotzen --zkey 123:ABC --getdoi [--template zenodo.json]
+zotzen --zot 123:ABC --getdoi [--template zenodo.json]
 ``` 
 The Zotero item with item key ABC is fetched (from group 123) and
 inspected. If there is a DOI, then:
@@ -67,10 +68,22 @@ The DOI is written to the Zotero item. I.e., ttach the resulting DOI
 to the Zotero record (to the DOI field or to extra if no DOI field).
 
 
-
-### Sync metadata an item
+### Linking a Zotero item to an existing Zenodo item
 ```
-zotzen --zkey 123:ABC --sync
+zotzen --zot 123:ABC --zen 567 
+``` 
+The Zotero item with item key ABC is fetched (from group 123) and
+inspected.
+
+If there is
+- no DOI
+- AND the zenodo item with key 567 exists,
+then the items as linked, i.e., the DOI derived from teh zenodo item key 567 is added to the zotero item.
+
+
+### Sync metadata from zotero to zenodo
+```
+zotzen --zot 123:ABC --sync
 ``` 
 
 The zotero item metadata is retrieved (as with `--show`)  and written to Zenodo (as above for `--getdoi`).
@@ -79,7 +92,7 @@ The zotero item metadata is retrieved (as with `--show`)  and written to Zenodo 
 ### Push Zotero attachments to Zenodo.
 
 ```
-zotzen --zkey 123:ABC --push [--types pdf|all]
+zotzen --zot 123:ABC --push [--types pdf|all]
 ```
 
 The attachments to ABC are attached to the record
@@ -89,7 +102,13 @@ The attachments to ABC are attached to the record
 ### Combinations
 The options `--getdoi`, `--sync` and `--push` can be combined.
 ```
-zotzen --zkey 123:ABC --getdoi --sync --push
+zotzen --zot 123:ABC --getdoi --sync --push
+```
+
+or
+
+```
+zotzen --zot 123:ABC --zen 456 --sync --push
 ```
 
 Also, publish the Zenodo record:
