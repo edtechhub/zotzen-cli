@@ -21,7 +21,7 @@ zotero-cli ???
 
 ## Use of zotzen
 
-## Create a new item on Zotero and Zenodo
+### Create a new item on Zotero and Zenodo
 Generate a new item pair:
 ```
 zotzen --new --show --title "ABC"
