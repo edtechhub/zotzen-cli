@@ -24,18 +24,31 @@ zotero-cli ???
 ### Create a new item on Zotero and Zenodo
 Generate a new item pair:
 ```
-zotzen --new --show --title "ABC"
+zotzen --new --title "ABC"
 ``` 
 Generate a new item pair in a specific Zotero group:
 
 ```
-zotzen --new --group 123 --show --title "ABC"
+zotzen --new --group 123 --title "ABC"
 ``` 
 
 This operation
 - Generates a Zotero item with title "ABC"
 - It registers a new record on Zenodo
 - Attached the DOI for the record to Zotero.
+- It prints out
+-- The Zotero ID: 123:XYZ
+-- The link to the Zotero id: https://...
+-- The Zotero-select link: zotero://...
+-- The Zenodo number: 678
+-- The Zenodo DOI: ..../...678
+-- The desposit link to Zenodo: https://....
+
+If the option 
+```
+--open
+```
+is specified then the Zenodo page and the Zotero page are opened in the browser.
 
 ### Check an existing zotero item
 ```
