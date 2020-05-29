@@ -1,0 +1,6 @@
+[submodule "Zenodo-tools"]
+	path = Zenodo-tools
+	url = https://github.com/bjohas/Zenodo-tools
+[submodule "zotero-cli"]
+	path = zotero-cli
+	url = https://github.com/edtechhub/zotero-cli
