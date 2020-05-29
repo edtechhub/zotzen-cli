@@ -21,7 +21,23 @@ zotero-cli ???
 
 ## Use of zotzen
 
-### Check an item
+## Create a new item on Zotero and Zenodo
+Generate a new item pair:
+```
+zotzen --new --show --title "ABC"
+``` 
+Generate a new item pair in a specific Zotero group:
+
+```
+zotzen --new --group 123 --show --title "ABC"
+``` 
+
+This operation
+- Generates a Zotero item with title "ABC"
+- It registers a new record on Zenodo
+- Attached the DOI for the record to Zotero.
+
+### Check an existing zotero item
 ```
 zotzen --zot 123:ABC --show
 ``` 
@@ -45,7 +61,7 @@ Zenodo:
 - Item is [not] writable.
 ```
 
-### Generate a DOI for a Zotero item
+### Generate a DOI for an existing Zotero item
 ```
 zotzen --zot 123:ABC --getdoi [--template zenodo.json]
 ``` 
