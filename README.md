@@ -50,6 +50,13 @@ If the option
 ```
 is specified then the Zenodo page and the Zotero page are opened in the browser.
 
+As an alternative to `--title`, you can specify
+```
+--json record.json
+```
+in which case the `record.json` will be used to generate the record on Zotero.
+
+
 ### Check an existing zotero item
 ```
 zotzen --zot 123:ABC --show
