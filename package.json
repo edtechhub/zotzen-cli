@@ -1,0 +1,23 @@
+{
+  "name": "zotzen",
+  "version": "1.0.0",
+  "description": "Command line utility to go from Zotero to Zenodo",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edtechhub/zotzen.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/edtechhub/zotzen/issues"
+  },
+  "homepage": "https://github.com/edtechhub/zotzen#readme",
+  "dependencies": {
+    "argparse": "^1.0.10"
+  }
+}
