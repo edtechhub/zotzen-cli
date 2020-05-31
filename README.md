@@ -1,5 +1,7 @@
 # zotzen
 
+A commandline tool to exchange data between Zotero and Zenodo, using the respective APIs. Developed by [@bjohas](https://github.com/bjohas) and [@a1diablo](https://github.com/a1diablo).
+
 Requires:
 - zenodo-cli from https://github.com/bjohas/Zenodo-tools
 - zotero-cli from https://github.com/edtechhub/zotero-cli
