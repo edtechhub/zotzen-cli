@@ -22,6 +22,9 @@ parser.addArgument('--open', {
   action: 'storeTrue',
   help: 'Open the zotero and zenodo link after creation.',
 });
+parser.addArgument('--group', {
+  help: 'Group ID for which the new item is to be created.',
+});
 
 const args = parser.parseArgs();
 
@@ -61,10 +64,16 @@ function parseFromZenodoResponse(content, key) {
     .trim();
 }
 
-function zoteroCreate(title, jsonFile = null) {
+function zoteroCreate(title, group, jsonFile = null) {
   if (jsonFile) {
     return JSON.parse(
-      runCommand(`create-item ${path.join(__dirname, jsonFile)}`, true)
+      runCommand(
+        `create-item ${group ? '--group ' + group : ''} ${path.join(
+          __dirname,
+          jsonFile
+        )}`,
+        true
+      )
     );
   }
 
@@ -75,7 +84,11 @@ function zoteroCreate(title, jsonFile = null) {
   const templateJson = JSON.parse(zoteroCreateItemTemplate);
   templateJson.title = title;
   return JSON.parse(
-    runCommandWithJsonFileInput('create-item', templateJson, true)
+    runCommandWithJsonFileInput(
+      `create-item ${group ? '--group ' + group : ''}`,
+      templateJson,
+      true
+    )
   );
 }
 
@@ -90,7 +103,7 @@ function zenodoCreate(zoteroRecord, zoteroSelectLink) {
 }
 
 function zotzenCreate(args) {
-  const zoteroRecord = zoteroCreate(args.title, args.json);
+  const zoteroRecord = zoteroCreate(args.title, args.group, args.json);
   const zoteroSelectLink = zoteroRecord.successful[0].links.self.href.replace(
     zoteroApiPrefix,
     zoteroSelectPrefix
@@ -101,7 +114,9 @@ function zotzenCreate(args) {
   const zenodoDepositUrl = parseFromZenodoResponse(zenodoRecord, 'URL');
 
   runCommandWithJsonFileInput(
-    `update-item --key ${zoteroRecord.successful['0'].key}`,
+    `update-item ${args.group ? '--group ' + args.group : ''} --key ${
+      zoteroRecord.successful['0'].key
+    }`,
     {
       extra: `DOI: ${doi}`,
     }
