@@ -25,6 +25,13 @@ parser.addArgument('--open', {
 parser.addArgument('--group', {
   help: 'Group ID for which the new item is to be created.',
 });
+parser.addArgument('--zot', {
+  help: 'Zotero id of the item group_id:item_key or item_key',
+});
+parser.addArgument('--show', {
+  action: 'storeTrue',
+  help: 'Show the zotero, zenodo item information.',
+});
 
 const args = parser.parseArgs();
 
@@ -140,6 +147,59 @@ function zotzenCreate(args) {
   }
 }
 
+function zoteroGet(groupId, itemKey) {
+  return JSON.parse(
+    runCommand(
+      `item ${groupId ? '--group ' + groupId : ''} --key ${itemKey}`,
+      true
+    )
+  );
+}
+
+function zenodoGet(doi) {
+  const zenodoResposne = runCommand(`get ${doi} --show`, false);
+  return {
+    title: parseFromZenodoResponse(zenodoResposne, 'Title'),
+    status: parseFromZenodoResponse(zenodoResposne, 'State'),
+    writable:
+      parseFromZenodoResponse(zenodoResposne, 'Published') == 'yes'
+        ? 'not'
+        : '',
+  };
+}
+
+function zotzenGet(args) {
+  let groupId = null;
+  let itemKey = null;
+  if (args.zot.includes(':')) {
+    groupId = args.zot.split(':')[0];
+    itemKey = args.zot.split(':')[1];
+  } else {
+    itemKey = args.zot;
+  }
+
+  const zoteroItem = zoteroGet(groupId, itemKey);
+  const doi =
+    zoteroItem.data.extra &&
+    zoteroItem.data.extra.split(':').slice(1).join(':').trim();
+
+  if (args.show) {
+    console.log(`- Item key: ${args.zot}`);
+    console.log(`- Title: ${zoteroItem.data.title}`);
+    console.log(`- DOI: ${doi}`);
+
+    if (doi) {
+      const zenodoItem = zenodoGet(doi);
+      console.log('- Item available.');
+      console.log(`- Item status: ${zenodoItem.status}`);
+      console.log(`- Title: ${zenodoItem.title}`);
+      console.log(`- Item is ${zenodoItem.writable} writable`);
+    }
+  }
+}
+
 if (args.new) {
   zotzenCreate(args);
+} else if (args.zot) {
+  zotzenGet(args);
 }
