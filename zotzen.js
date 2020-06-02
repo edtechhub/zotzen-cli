@@ -103,7 +103,7 @@ function zotzenCreate(args) {
   runCommandWithJsonFileInput(
     `update-item --key ${zoteroRecord.successful['0'].key}`,
     {
-      extra: doi,
+      extra: `DOI: ${doi}`,
     }
   );
 
