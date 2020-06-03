@@ -75,7 +75,7 @@ function zoteroCreate(title, group, jsonFile = null) {
   if (jsonFile) {
     return JSON.parse(
       runCommand(
-        `create-item ${group ? '--group-id ' + group : ''} ${path.join(
+        `${group ? '--group-id ' + group : ''} create-item ${path.join(
           __dirname,
           jsonFile
         )}`,
@@ -92,7 +92,7 @@ function zoteroCreate(title, group, jsonFile = null) {
   templateJson.title = title;
   return JSON.parse(
     runCommandWithJsonFileInput(
-      `create-item ${group ? '--group-id ' + group : ''}`,
+      `${group ? '--group-id ' + group : ''} create-item`,
       templateJson,
       true
     )
