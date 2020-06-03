@@ -179,9 +179,14 @@ function zotzenGet(args) {
   }
 
   const zoteroItem = zoteroGet(groupId, itemKey);
-  const doi =
-    zoteroItem.data.extra &&
-    zoteroItem.data.extra.split(':').slice(1).join(':').trim();
+  let doi = null;
+  const doiRegex = new RegExp(/10\.5281\/zenodo\.[0-9]+/);
+  if (zoteroItem.data.extra) {
+    const match = zoteroItem.data.extra.match(doiRegex);
+    if (match) {
+      doi = match[0];
+    }
+  }
 
   if (args.show) {
     console.log(`- Item key: ${args.zot}`);
