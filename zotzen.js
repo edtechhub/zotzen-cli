@@ -147,10 +147,12 @@ function zotzenCreate(args) {
   }
 }
 
-function zoteroGet(groupId, itemKey) {
+function zoteroGet(groupId, userId, itemKey) {
   return JSON.parse(
     runCommand(
-      `${groupId ? '--group-id ' + groupId : ''} item --key ${itemKey}`,
+      `${groupId ? '--group-id ' + groupId : ''} ${
+        userId ? '--user-id ' + userId : ''
+      } item --key ${itemKey}`,
       true
     )
   );
@@ -171,14 +173,26 @@ function zenodoGet(doi) {
 function zotzenGet(args) {
   let groupId = null;
   let itemKey = null;
-  if (args.zot.includes(':')) {
+  let userId = null;
+  if (args.zot.includes('zotero')) {
+    const selectLink = args.zot.split('/');
+    if (selectLink.length < 7) {
+      throw new Error('Invalid zotero select link specified');
+    }
+    if (selectLink[3] == 'users') {
+      userId = selectLink[4];
+    } else {
+      groupId = selectLink[4];
+    }
+    itemKey = selectLink[6];
+  } else if (args.zot.includes(':')) {
     groupId = args.zot.split(':')[0];
     itemKey = args.zot.split(':')[1];
   } else {
     itemKey = args.zot;
   }
 
-  const zoteroItem = zoteroGet(groupId, itemKey);
+  const zoteroItem = zoteroGet(groupId, userId, itemKey);
   let doi = null;
   const doiRegex = new RegExp(/10\.5281\/zenodo\.[0-9]+/);
   if (zoteroItem.data.extra) {
@@ -189,7 +203,7 @@ function zotzenGet(args) {
   }
 
   if (args.show) {
-    console.log(`- Item key: ${args.zot}`);
+    console.log(`- Item key: ${itemKey}`);
     console.log(`- Title: ${zoteroItem.data.title}`);
     console.log(`- DOI: ${doi}`);
 
