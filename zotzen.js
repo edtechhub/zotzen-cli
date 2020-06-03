@@ -54,11 +54,15 @@ function runCommandWithJsonFileInput(command, json, zotero = true) {
 }
 
 function runCommand(command, zotero = true) {
-  return childProcess
-    .execSync(`${zotero ? zoteroPrefix : zenodoPrefix} ${command}`, {
-      cwd: `${zotero ? 'zotero' : 'zenodo'}-cli`,
-    })
-    .toString();
+  try {
+    return childProcess
+      .execSync(`${zotero ? zoteroPrefix : zenodoPrefix} ${command}`, {
+        cwd: `${zotero ? 'zotero' : 'zenodo'}-cli`,
+      })
+      .toString();
+  } catch (ex) {
+    throw new Error(`${zotero ? 'Zotero' : 'Zenodo'}: ${ex.output.toString()}`);
+  }
 }
 
 function parseFromZenodoResponse(content, key) {
@@ -217,8 +221,13 @@ function zotzenGet(args) {
   }
 }
 
-if (args.new) {
-  zotzenCreate(args);
-} else if (args.zot) {
-  zotzenGet(args);
+try {
+  if (args.new) {
+    zotzenCreate(args);
+  } else if (args.zot) {
+    zotzenGet(args);
+  }
+} catch (ex) {
+  console.log('Error: ');
+  console.log(ex.message);
 }
