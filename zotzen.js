@@ -207,12 +207,15 @@ function zotzenGet(args) {
   }
 
   if (args.show) {
+    console.log('Zotero:');
     console.log(`- Item key: ${itemKey}`);
     console.log(`- Title: ${zoteroItem.data.title}`);
     console.log(`- DOI: ${doi}`);
+    console.log('');
 
     if (doi) {
       const zenodoItem = zenodoGet(doi);
+      console.log('Zenodo:');
       console.log('- Item available.');
       console.log(`- Item status: ${zenodoItem.status}`);
       console.log(`- Title: ${zenodoItem.title}`);
