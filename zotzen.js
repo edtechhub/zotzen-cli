@@ -75,7 +75,7 @@ function zoteroCreate(title, group, jsonFile = null) {
   if (jsonFile) {
     return JSON.parse(
       runCommand(
-        `create-item ${group ? '--group ' + group : ''} ${path.join(
+        `create-item ${group ? '--group-id ' + group : ''} ${path.join(
           __dirname,
           jsonFile
         )}`,
@@ -92,7 +92,7 @@ function zoteroCreate(title, group, jsonFile = null) {
   templateJson.title = title;
   return JSON.parse(
     runCommandWithJsonFileInput(
-      `create-item ${group ? '--group ' + group : ''}`,
+      `create-item ${group ? '--group-id ' + group : ''}`,
       templateJson,
       true
     )
@@ -121,7 +121,7 @@ function zotzenCreate(args) {
   const zenodoDepositUrl = parseFromZenodoResponse(zenodoRecord, 'URL');
 
   runCommandWithJsonFileInput(
-    `update-item ${args.group ? '--group ' + args.group : ''} --key ${
+    `${args.group ? '--group-id ' + args.group : ''} update-item --key ${
       zoteroRecord.successful['0'].key
     }`,
     {
@@ -150,7 +150,7 @@ function zotzenCreate(args) {
 function zoteroGet(groupId, itemKey) {
   return JSON.parse(
     runCommand(
-      `item ${groupId ? '--group ' + groupId : ''} --key ${itemKey}`,
+      `${groupId ? '--group-id ' + groupId : ''} item --key ${itemKey}`,
       true
     )
   );
