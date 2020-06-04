@@ -121,13 +121,17 @@ zotzen --zot 123:ABC --getdoi [--template zenodo.json]
 ```
 
 The Zotero item with item key ABC is fetched (from group 123) and
-inspected. If there is a DOI, then:
+inspected.
+
+(1) If there is a DOI, then:
 
 ```
 Item has DOI already: <DOI>
 ```
 
-If there isn't a DOI, the item data is put into Zenodo format (basic
+If that's a Zenodo DOI, inspect the Zenodo DOI and see whether the reference in the item is back to the same Zotero item. Print the result.
+
+(2) If there isn't a DOI, the item data is put into Zenodo format (basic
 use of title, abstract, date and authors only, for now). Additional fields are filled
 form the `zenodo.json` if provided. Response:
 
@@ -136,7 +140,8 @@ DOI allocated: <DOI>
 ```
 
 The DOI is written to the Zotero item. I.e., ttach the resulting DOI
-to the Zotero record (to the DOI field or to extra if no DOI field).
+to the Zotero record (to the DOI field or to extra if no DOI
+field). The Zotero item ID is written to the Zenodo record as above.
 
 ### Linking a Zotero item to an existing Zenodo item
 
@@ -149,9 +154,13 @@ inspected.
 
 If there is
 
-- no DOI
+- no DOI in the Zotero item
 - AND the zenodo item with key 567 exists,
-  then the items as linked, i.e., the DOI derived from teh zenodo item key 567 is added to the zotero item.
+- AND the zenodo item does not link to a different Zotero item
+
+then: the items as linked, i.e., the DOI derived from the zenodo item
+key 567 is added to the zotero item. The Zotero item id is added to
+the Zenodo item as above.
 
 ### Sync metadata from zotero to zenodo
 
@@ -159,7 +168,10 @@ If there is
 zotzen --zot 123:ABC --sync
 ```
 
-The zotero item metadata is retrieved (as with `--show`) and written to Zenodo (as above for `--getdoi`).
+- The zotero item metadata is retrieved (as with `--show`).
+-- If there's no Zenodo DOI, abort with "This item has no Zenodo DOI. You need to generate or link one first with --getdoi."
+-- Check the Zenodo item, and check it links back to the Zotero item. If not, abort with "The Zenodo item exists, but is not linked. You need to link the items with --zen XXX first."
+- Then, the Zotero metadata is written to Zenodo item (as above for `--getdoi`).
 
 ### Push Zotero attachments to Zenodo.
 
