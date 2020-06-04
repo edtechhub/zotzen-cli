@@ -171,7 +171,12 @@ function zenodoGet(doi) {
       parseFromZenodoResponse(zenodoResposne, 'Published') == 'yes'
         ? 'not'
         : '',
+    url: parseFromZenodoResponse(zenodoResposne, 'URL'),
   };
+}
+
+function getZoteroSelectlink(id, key, group = false) {
+  return `zotero://select/${group ? 'groups' : 'users'}/${id}/items/${key}`;
 }
 
 function zotzenGet(args) {
@@ -205,6 +210,11 @@ function zotzenGet(args) {
       doi = match[0];
     }
   }
+  const zoteroSelectLink = getZoteroSelectlink(
+    groupId || userId,
+    itemKey,
+    !!groupId
+  );
 
   if (args.show) {
     console.log('Zotero:');
@@ -220,7 +230,15 @@ function zotzenGet(args) {
       console.log(`- Item status: ${zenodoItem.status}`);
       console.log(`- Title: ${zenodoItem.title}`);
       console.log(`- Item is ${zenodoItem.writable} writable`);
+
+      if (args.open) {
+        opn(zenodoItem.url);
+      }
     }
+  }
+
+  if (args.open) {
+    opn(zoteroSelectLink);
   }
 }
 
