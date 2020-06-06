@@ -7,23 +7,19 @@ const path = require('path');
 const parser = new ArgumentParser({
   version: '1.0.0',
   addHelp: true,
-  description: 'Zotzen utility',
+  description: 'Zotzen utility. Main modes are --new or --zot.',
 });
 
 parser.addArgument('--new', {
   action: 'storeTrue',
-  help: 'Create a new document.',
+  help: 'Create a new pair of Zotero/Zenodo entries.',
 });
-parser.addArgument('--title', { help: 'Title of the new document.' });
+parser.addArgument('--title', { help: 'Title of the new entries.' });
 parser.addArgument('--json', {
-  help: 'Path of the json for the new document.',
-});
-parser.addArgument('--open', {
-  action: 'storeTrue',
-  help: 'Open the zotero and zenodo link after creation.',
+  help: 'A Zotero json file to be used for the Zotero entry.',
 });
 parser.addArgument('--group', {
-  help: 'Group ID for which the new item is to be created.',
+  help: 'Group ID for which the new item Zotero is to be created.',
 });
 parser.addArgument('--zot', {
   help: 'Zotero id of the item group_id:item_key or item_key',
@@ -31,6 +27,10 @@ parser.addArgument('--zot', {
 parser.addArgument('--show', {
   action: 'storeTrue',
   help: 'Show the zotero, zenodo item information.',
+});
+parser.addArgument('--open', {
+  action: 'storeTrue',
+  help: 'Open the zotero and zenodo link after creation.',
 });
 
 const args = parser.parseArgs();
