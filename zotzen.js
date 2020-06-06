@@ -14,23 +14,23 @@ parser.addArgument('--new', {
   action: 'storeTrue',
   help: 'Create a new pair of Zotero/Zenodo entries.',
 });
-parser.addArgument('--title', { help: 'Title of the new entries.' });
+parser.addArgument('--title', { help: 'Title of the new entries (for --new).' });
 parser.addArgument('--json', {
-  help: 'A Zotero json file to be used for the Zotero entry.',
+  help: 'A Zotero json file to be used for the Zotero entry (for --new).',
 });
 parser.addArgument('--group', {
-  help: 'Group ID for which the new item Zotero is to be created.',
+  help: 'Group ID for which the new item Zotero is to be created (for --new).',
 });
 parser.addArgument('--zot', {
   help: 'Zotero id of the item group_id:item_key or item_key',
 });
 parser.addArgument('--show', {
   action: 'storeTrue',
-  help: 'Show the zotero, zenodo item information.',
+  help: 'Show the zotero, zenodo item information (for both --new and --zot).',
 });
 parser.addArgument('--open', {
   action: 'storeTrue',
-  help: 'Open the zotero and zenodo link after creation.',
+  help: 'Open the zotero and zenodo link after creation (for both --new and --zot).',
 });
 
 const args = parser.parseArgs();
