@@ -42,6 +42,9 @@ parser.addArgument('--getdoi', {
 parser.addArgument('--template', {
   help: 'Path of the template to be used for creating Zenodo record.',
 });
+parser.addArgument('--zen', {
+  help: 'Zenodo record id of the item to be linked.',
+});
 
 const args = parser.parseArgs();
 
@@ -125,13 +128,17 @@ function zenodoCreate(
   return runCommandWithJsonFileInput('create --show', zenodoTemplate, false);
 }
 
-function linkZotZen(zoteroKey, zenodoDoi, group) {
+function linkZotZen(zoteroKey, zenodoDoi, group, zoteroLink = null) {
   runCommandWithJsonFileInput(
     `${group ? '--group-id ' + group : ''} update-item --key ${zoteroKey}`,
     {
       extra: `DOI: ${zenodoDoi}`,
     }
   );
+
+  if (zoteroLink) {
+    runCommand(`update ${zenodoDoi} --zotero-link ${zoteroLink}`, false);
+  }
 }
 
 function zotzenCreate(args) {
@@ -189,6 +196,7 @@ function zenodoGet(doi) {
         ? 'not'
         : '',
     url: parseFromZenodoResponse(zenodoResponse, 'URL'),
+    doi: parseFromZenodoResponse(zenodoResponse, 'DOI'),
   };
 }
 
@@ -255,6 +263,35 @@ function zotzenGet(args) {
       );
       doi = parseFromZenodoResponse(zenodoRecord, 'DOI');
       linkZotZen(itemKey, doi, groupId);
+      console.log(`DOI allocated: ${doi}`);
+    }
+  } else if (args.zen) {
+    let zenodoItem = null;
+    try {
+      zenodoItem = zenodoGetRaw(args.zen);
+    } catch (ex) {}
+    if (doi) {
+      zenodoItem = zenodoGetRaw(doi);
+      console.log(`Item has DOI already: ${doi}`);
+      console.log(
+        `Linked zotero record: `,
+        zenodoItem.related_identifiers[0].identifier
+      );
+    } else if (!zenodoItem) {
+      console.log(`Zenodo item with id ${args.zen} does not exist.`);
+    } else if (
+      zenodoItem.related_identifiers &&
+      zenodoItem.related_identifiers.length >= 1 &&
+      zenodoItem.related_identifiers[0].identifier !== zoteroSelectLink
+    ) {
+      console.log(
+        'Zenodo item is linked to a different Zotero item: ',
+        zenodoItem.related_identifiers[0].identifier
+      );
+    } else {
+      const zenodoLinked = zenodoGet(args.zen);
+      doi = zenodoLinked.doi;
+      linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
       console.log(`DOI allocated: ${doi}`);
     }
   }
