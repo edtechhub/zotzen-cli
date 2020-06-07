@@ -45,6 +45,10 @@ parser.addArgument('--template', {
 parser.addArgument('--zen', {
   help: 'Zenodo record id of the item to be linked.',
 });
+parser.addArgument('--sync', {
+  action: 'storeTrue',
+  help: 'Sync metadata from zotero to zenodo.',
+});
 
 const args = parser.parseArgs();
 
@@ -116,11 +120,8 @@ function zoteroCreate(title, group, jsonFile = null) {
   );
 }
 
-function zenodoCreate(
-  title,
-  zoteroSelectLink,
-  template = zenodoCreateRecordTemplatePath
-) {
+function zenodoCreate(title, zoteroSelectLink, template) {
+  template = template || zenodoCreateRecordTemplatePath;
   const zenodoTemplate = JSON.parse(fs.readFileSync(template).toString());
   zenodoTemplate.related_identifiers[0].identifier = zoteroSelectLink;
   if (!zenodoTemplate.title) zenodoTemplate.title = title;
@@ -247,13 +248,14 @@ function zotzenGet(args) {
     !!groupId
   );
 
+  let zenodoRawItem = null;
   if (args.getdoi) {
     if (doi) {
-      const zenodoItem = zenodoGetRaw(doi);
+      zenodoRawItem = zenodoGetRaw(doi);
       console.log(`Item has DOI already: ${doi}`);
       console.log(
         `Linked zotero record: `,
-        zenodoItem.related_identifiers[0].identifier
+        zenodoRawItem.related_identifiers[0].identifier
       );
     } else {
       const zenodoRecord = zenodoCreate(
@@ -266,27 +268,26 @@ function zotzenGet(args) {
       console.log(`DOI allocated: ${doi}`);
     }
   } else if (args.zen) {
-    let zenodoItem = null;
     try {
-      zenodoItem = zenodoGetRaw(args.zen);
+      zenodoRawItem = zenodoGetRaw(args.zen);
     } catch (ex) {}
     if (doi) {
-      zenodoItem = zenodoGetRaw(doi);
+      zenodoRawItem = zenodoGetRaw(doi);
       console.log(`Item has DOI already: ${doi}`);
       console.log(
         `Linked zotero record: `,
         zenodoItem.related_identifiers[0].identifier
       );
-    } else if (!zenodoItem) {
+    } else if (!zenodoRawItem) {
       console.log(`Zenodo item with id ${args.zen} does not exist.`);
     } else if (
-      zenodoItem.related_identifiers &&
-      zenodoItem.related_identifiers.length >= 1 &&
-      zenodoItem.related_identifiers[0].identifier !== zoteroSelectLink
+      zenodoRawItem.related_identifiers &&
+      zenodoRawItem.related_identifiers.length >= 1 &&
+      zenodoRawItem.related_identifiers[0].identifier !== zoteroSelectLink
     ) {
       console.log(
         'Zenodo item is linked to a different Zotero item: ',
-        zenodoItem.related_identifiers[0].identifier
+        zenodoRawItem.related_identifiers[0].identifier
       );
     } else {
       const zenodoLinked = zenodoGet(args.zen);
@@ -299,6 +300,37 @@ function zotzenGet(args) {
   let zenodoItem = null;
   if (doi) {
     zenodoItem = zenodoGet(doi);
+    zenodoRawItem = zenodoGetRaw(doi);
+  }
+
+  if (args.sync) {
+    if (!doi) {
+      console.log(
+        'This item has no Zenodo DOI. You need to generate or link one first with --getdoi.'
+      );
+    } else if (!zenodoRawItem) {
+      console.log(`Zenodo item with id ${doi} does not exist.`);
+    } else if (
+      zenodoRawItem.related_identifiers &&
+      zenodoRawItem.related_identifiers.length >= 1 &&
+      zenodoRawItem.related_identifiers[0].identifier !== zoteroSelectLink
+    ) {
+      console.log(
+        `The Zenodo item exists, but is not linked. You need to link the items with --zen ${doi} first.`
+      );
+    } else {
+      runCommandWithJsonFileInput(
+        `update ${doi} --json `,
+        {
+          title: zoteroItem.data.tite,
+          description: zoteroItem.data.abstractNote,
+          creators: zoteroItem.data.creators.map((c) => {
+            return { name: `${c.lastName}, ${c.firstName}` };
+          }),
+        },
+        false
+      );
+    }
   }
 
   if (args.show) {
@@ -330,6 +362,6 @@ try {
     zotzenGet(args);
   }
 } catch (ex) {
-  console.log('Error: ');
+  console.log('Error: ', ex);
   console.log(ex.message);
 }
