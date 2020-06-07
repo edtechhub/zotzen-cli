@@ -14,7 +14,9 @@ parser.addArgument('--new', {
   action: 'storeTrue',
   help: 'Create a new pair of Zotero/Zenodo entries.',
 });
-parser.addArgument('--title', { help: 'Title of the new entries (for --new).' });
+parser.addArgument('--title', {
+  help: 'Title of the new entries (for --new).',
+});
 parser.addArgument('--json', {
   help: 'A Zotero json file to be used for the Zotero entry (for --new).',
 });
@@ -30,7 +32,15 @@ parser.addArgument('--show', {
 });
 parser.addArgument('--open', {
   action: 'storeTrue',
-  help: 'Open the zotero and zenodo link after creation (for both --new and --zot).',
+  help:
+    'Open the zotero and zenodo link after creation (for both --new and --zot).',
+});
+parser.addArgument('--getdoi', {
+  action: 'storeTrue',
+  help: 'Generate a DOI for an existing Zotero item.',
+});
+parser.addArgument('--template', {
+  help: 'Path of the template to be used for creating Zenodo record.',
 });
 
 const args = parser.parseArgs();
@@ -103,14 +113,25 @@ function zoteroCreate(title, group, jsonFile = null) {
   );
 }
 
-function zenodoCreate(zoteroRecord, zoteroSelectLink) {
-  const zenodoTemplate = JSON.parse(
-    fs.readFileSync(zenodoCreateRecordTemplatePath).toString()
-  );
+function zenodoCreate(
+  title,
+  zoteroSelectLink,
+  template = zenodoCreateRecordTemplatePath
+) {
+  const zenodoTemplate = JSON.parse(fs.readFileSync(template).toString());
   zenodoTemplate.related_identifiers[0].identifier = zoteroSelectLink;
-  zenodoTemplate.title = zoteroRecord.successful[0].data.title;
-  zenodoTemplate.description = zoteroRecord.successful[0].data.title;
+  if (!zenodoTemplate.title) zenodoTemplate.title = title;
+  if (!zenodoTemplate.description) zenodoTemplate.description = title;
   return runCommandWithJsonFileInput('create --show', zenodoTemplate, false);
+}
+
+function linkZotZen(zoteroKey, zenodoDoi, group) {
+  runCommandWithJsonFileInput(
+    `${group ? '--group-id ' + group : ''} update-item --key ${zoteroKey}`,
+    {
+      extra: `DOI: ${zenodoDoi}`,
+    }
+  );
 }
 
 function zotzenCreate(args) {
@@ -120,18 +141,14 @@ function zotzenCreate(args) {
     zoteroSelectPrefix
   );
 
-  const zenodoRecord = zenodoCreate(zoteroRecord, zoteroSelectLink);
+  const zenodoRecord = zenodoCreate(
+    zoteroRecord.successful[0].data.title,
+    zoteroSelectLink
+  );
   const doi = parseFromZenodoResponse(zenodoRecord, 'DOI');
   const zenodoDepositUrl = parseFromZenodoResponse(zenodoRecord, 'URL');
 
-  runCommandWithJsonFileInput(
-    `${args.group ? '--group-id ' + args.group : ''} update-item --key ${
-      zoteroRecord.successful['0'].key
-    }`,
-    {
-      extra: `DOI: ${doi}`,
-    }
-  );
+  linkZotZen(zoteroRecord.successful[0].key, doi, args.group);
 
   console.log('Item successfully created: ');
   console.log(
@@ -163,16 +180,22 @@ function zoteroGet(groupId, userId, itemKey) {
 }
 
 function zenodoGet(doi) {
-  const zenodoResposne = runCommand(`get ${doi} --show`, false);
+  const zenodoResponse = runCommand(`get ${doi} --show`, false);
   return {
-    title: parseFromZenodoResponse(zenodoResposne, 'Title'),
-    status: parseFromZenodoResponse(zenodoResposne, 'State'),
+    title: parseFromZenodoResponse(zenodoResponse, 'Title'),
+    status: parseFromZenodoResponse(zenodoResponse, 'State'),
     writable:
-      parseFromZenodoResponse(zenodoResposne, 'Published') == 'yes'
+      parseFromZenodoResponse(zenodoResponse, 'Published') == 'yes'
         ? 'not'
         : '',
-    url: parseFromZenodoResponse(zenodoResposne, 'URL'),
+    url: parseFromZenodoResponse(zenodoResponse, 'URL'),
   };
+}
+
+function zenodoGetRaw(doi) {
+  runCommand(`get ${doi}`, false);
+  const fileName = doi.split('.').pop();
+  return JSON.parse(fs.readFileSync(`zenodo-cli/${fileName}.json`).toString());
 }
 
 function getZoteroSelectlink(id, key, group = false) {
@@ -216,6 +239,31 @@ function zotzenGet(args) {
     !!groupId
   );
 
+  if (args.getdoi) {
+    if (doi) {
+      const zenodoItem = zenodoGetRaw(doi);
+      console.log(`Item has DOI already: ${doi}`);
+      console.log(
+        `Linked zotero record: `,
+        zenodoItem.related_identifiers[0].identifier
+      );
+    } else {
+      const zenodoRecord = zenodoCreate(
+        zoteroItem.data.title,
+        zoteroSelectLink,
+        args.template
+      );
+      doi = parseFromZenodoResponse(zenodoRecord, 'DOI');
+      linkZotZen(itemKey, doi, groupId);
+      console.log(`DOI allocated: ${doi}`);
+    }
+  }
+
+  let zenodoItem = null;
+  if (doi) {
+    zenodoItem = zenodoGet(doi);
+  }
+
   if (args.show) {
     console.log('Zotero:');
     console.log(`- Item key: ${itemKey}`);
@@ -224,21 +272,17 @@ function zotzenGet(args) {
     console.log('');
 
     if (doi) {
-      const zenodoItem = zenodoGet(doi);
       console.log('Zenodo:');
       console.log('- Item available.');
       console.log(`- Item status: ${zenodoItem.status}`);
       console.log(`- Title: ${zenodoItem.title}`);
       console.log(`- Item is ${zenodoItem.writable} writable`);
-
-      if (args.open) {
-        opn(zenodoItem.url);
-      }
     }
   }
 
   if (args.open) {
     opn(zoteroSelectLink);
+    opn(zenodoItem.url);
   }
 }
 
