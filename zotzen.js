@@ -49,6 +49,10 @@ parser.addArgument('--sync', {
   action: 'storeTrue',
   help: 'Sync metadata from zotero to zenodo.',
 });
+parser.addArgument('--publish', {
+  action: 'storeTrue',
+  help: 'Publish zenodo record.',
+});
 
 const args = parser.parseArgs();
 
@@ -349,9 +353,15 @@ function zotzenGet(args) {
     }
   }
 
+  if (args.publish && doi) {
+    runCommand(`get ${doi} --publish`, false);
+  }
+
   if (args.open) {
     opn(zoteroSelectLink);
-    opn(zenodoItem.url);
+    if (zenodoItem) {
+      opn(zenodoItem.url);
+    }
   }
 }
 
