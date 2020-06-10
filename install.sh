@@ -1,7 +1,7 @@
-git submodule update --init --recursive
+#git submodule update --init --recursive
 cd zotero-cli
 npm install
-npm run build
+npm build run
 cd ..
 cd zenodo-cli
 pip3 install -r requirements.txt
