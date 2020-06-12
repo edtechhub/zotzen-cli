@@ -3,6 +3,7 @@ const childProcess = require('child_process');
 const fs = require('fs');
 const opn = require('opn');
 const path = require('path');
+const prompt = require('prompt');
 
 const parser = new ArgumentParser({
   version: '1.0.0',
@@ -52,6 +53,10 @@ parser.addArgument('--sync', {
 parser.addArgument('--publish', {
   action: 'storeTrue',
   help: 'Publish zenodo record.',
+});
+parser.addArgument('--install', {
+  action: 'storeTrue',
+  help: 'Install the config for Zotero and Zenodo.',
 });
 
 const args = parser.parseArgs();
@@ -370,6 +375,57 @@ try {
     zotzenCreate(args);
   } else if (args.zot) {
     zotzenGet(args);
+  } else if (args.install) {
+    const schema = {
+      properties: {
+        'Zenodo API Key': {
+          message: 'Please enter you Zenodo API Key. (Enter to ignore)',
+        },
+        'Zotero API Key': {
+          message: 'Please enter your Zotero API Key. (Enter to ignore)',
+        },
+        'Zotero User ID': {
+          message: 'Please enter your Zotero User ID. (Enter to ignore)',
+        },
+        'Zotero Group ID': {
+          message: 'Please enter your Zotero Group ID. (Enter to ignore)',
+        },
+      },
+    };
+    prompt.start();
+    prompt.get(schema, (err, result) => {
+      if (err) {
+        console.err('Invalid input received');
+      } else {
+        const zenKey = result['Zenodo API Key'];
+        if (zenKey) {
+          fs.writeFileSync(
+            'zenodo-cli/config.json',
+            JSON.stringify({
+              accessToken: zenKey,
+            })
+          );
+          console.log(
+            'Zenodo config wrote successfully to zenodo-cli/config.json.'
+          );
+        }
+
+        const zotKey = result['Zotero API Key'];
+        const zotUid = result['Zotero User ID'];
+        const zotGid = result['Zotero Group ID'];
+        if (zotKey || zotUid || zotGid) {
+          fs.writeFileSync(
+            'zotero-cli/zotero-cli.toml',
+            `${zotKey ? 'api-key="' + zotKey + '"\n' : ''}` +
+              `${zotUid ? 'user-id="' + zotUid + '"\n' : ''}` +
+              `${zotGid ? 'group-id="' + zotGid + '"\n' : ''}`
+          );
+          console.log(
+            'Zetoro config wrote successfully to zotero-cli/zotero-cli.toml'
+          );
+        }
+      }
+    });
   }
 } catch (ex) {
   console.log('Error: ', ex);

@@ -19,6 +19,7 @@
   "homepage": "https://github.com/edtechhub/zotzen#readme",
   "dependencies": {
     "argparse": "^1.0.10",
-    "opn": "^6.0.0"
+    "opn": "^6.0.0",
+    "prompt": "^1.0.0"
   }
 }
