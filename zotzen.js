@@ -62,7 +62,7 @@ parser.addArgument('--install', {
 const args = parser.parseArgs();
 
 const zoteroPrefix = 'node bin/zotero-cli.js';
-const zenodoPrefix = 'python zenodo-cli.py';
+const zenodoPrefix = 'python3 zenodo-cli.py';
 const zoteroSelectPrefix = 'zotero://select';
 const zoteroApiPrefix = 'https://api.zotero.org';
 const zoteroTmpFile = 'zotero-cli/tmp';
