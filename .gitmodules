@@ -1,6 +1,6 @@
 [submodule "zenodo-cli"]
 	path = zenodo-cli
-	url = git@github.com:bjohas/zenodo-cli.git
+	url = https://github.com/bjohas/zenodo-cli.git
 [submodule "zotero-cli"]
 	path = zotero-cli
 	url = https://github.com/edtechhub/zotero-cli
