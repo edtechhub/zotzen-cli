@@ -50,6 +50,15 @@ parser.addArgument('--sync', {
   action: 'storeTrue',
   help: 'Sync metadata from zotero to zenodo.',
 });
+parser.addArgument('--push', {
+  action: 'storeTrue',
+  help: 'Push Zotero attachments to Zenodo.',
+});
+parser.addArgument('--type', {
+  action: 'store',
+  help: 'Type of the attachments to be pushed.',
+  defaultValue: 'pdf',
+});
 parser.addArgument('--publish', {
   action: 'storeTrue',
   help: 'Publish zenodo record.',
@@ -62,7 +71,7 @@ parser.addArgument('--install', {
 const args = parser.parseArgs();
 
 const zoteroPrefix = 'node bin/zotero-cli.js';
-const zenodoPrefix = 'python3 zenodo-cli.py';
+const zenodoPrefix = 'python zenodo-cli.py';
 const zoteroSelectPrefix = 'zotero://select';
 const zoteroApiPrefix = 'https://api.zotero.org';
 const zoteroTmpFile = 'zotero-cli/tmp';
@@ -220,6 +229,40 @@ function getZoteroSelectlink(id, key, group = false) {
   return `zotero://select/${group ? 'groups' : 'users'}/${id}/items/${key}`;
 }
 
+function syncErrors(doi, zenodoRawItem, zoteroSelectLink) {
+  let error = false;
+  if (!doi) {
+    console.log(
+      'This item has no Zenodo DOI. You need to generate or link one first with --getdoi.'
+    );
+    error = true;
+  } else if (!zenodoRawItem) {
+    console.log(`Zenodo item with id ${doi} does not exist.`);
+    error = true;
+  } else if (
+    zenodoRawItem.related_identifiers &&
+    zenodoRawItem.related_identifiers.length >= 1 &&
+    zenodoRawItem.related_identifiers[0].identifier !== zoteroSelectLink
+  ) {
+    console.log(zoteroSelectLink);
+    console.log(
+      `The Zenodo item exists, but is not linked. You need to link the items with --zen ${doi} first.`
+    );
+    error = true;
+  }
+  return error;
+}
+
+function pushAttachment(key, fileName, doi, groupId) {
+  console.log(`Pushing ${fileName}`);
+  runCommand(
+    `${
+      groupId ? '--group-id ' + groupId : ''
+    } attachment --key ${key} --save ../${fileName}`
+  );
+  runCommand(`upload ${doi} ../${fileName}`, false);
+}
+
 function zotzenGet(args) {
   let groupId = null;
   let itemKey = null;
@@ -251,6 +294,7 @@ function zotzenGet(args) {
       doi = match[0];
     }
   }
+
   const zoteroSelectLink = getZoteroSelectlink(
     groupId || userId,
     itemKey,
@@ -313,21 +357,7 @@ function zotzenGet(args) {
   }
 
   if (args.sync) {
-    if (!doi) {
-      console.log(
-        'This item has no Zenodo DOI. You need to generate or link one first with --getdoi.'
-      );
-    } else if (!zenodoRawItem) {
-      console.log(`Zenodo item with id ${doi} does not exist.`);
-    } else if (
-      zenodoRawItem.related_identifiers &&
-      zenodoRawItem.related_identifiers.length >= 1 &&
-      zenodoRawItem.related_identifiers[0].identifier !== zoteroSelectLink
-    ) {
-      console.log(
-        `The Zenodo item exists, but is not linked. You need to link the items with --zen ${doi} first.`
-      );
-    } else {
+    if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
       runCommandWithJsonFileInput(
         `update ${doi} --json `,
         {
@@ -339,6 +369,35 @@ function zotzenGet(args) {
         },
         false
       );
+    }
+  }
+
+  if (args.push) {
+    if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
+      const children = JSON.parse(
+        runCommand(
+          `${
+            groupId ? '--group-id ' + groupId : ''
+          } get /items/${itemKey}/children`,
+          true
+        )
+      );
+      let attachments = children.filter(
+        (c) => c.data.itemType === 'attachment'
+      );
+      if (args.type !== 'all') {
+        attachments = attachments.filter(
+          (a) => a.data.contentType === `application/${args.type}`
+        );
+      }
+      attachments.forEach((attachment) => {
+        pushAttachment(
+          attachment.data.key,
+          attachment.data.filename,
+          doi,
+          groupId
+        );
+      });
     }
   }
 
