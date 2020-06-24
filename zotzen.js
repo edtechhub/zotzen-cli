@@ -67,6 +67,10 @@ parser.addArgument('--install', {
   action: 'storeTrue',
   help: 'Install the config for Zotero and Zenodo.',
 });
+parser.addArgument('--debug', {
+  action: 'storeTrue',
+  help: 'Enable debug logging',
+});
 
 const args = parser.parseArgs();
 
@@ -260,12 +264,15 @@ function pushAttachment(key, fileName, doi, groupId) {
       groupId ? '--group-id ' + groupId : ''
     } attachment --key ${key} --save "../${fileName}"`
   );
-    // TODO: What is the above command fails?
-    // TODO: Also, I've inserted "..." in case the filename contains spaces. However, really the filename should be made shell-proof.
-    // In perl, you would say:
-    //                           use String::ShellQuote; $safefilename = shell_quote($filename);
+  // TODO: What is the above command fails?
+  // TODO: Also, I've inserted "..." in case the filename contains spaces. However, really the filename should be made shell-proof.
+  // In perl, you would say:
+  //                           use String::ShellQuote; $safefilename = shell_quote($filename);
+  // There's no built-in for escaping. We can only escape special characters. We can do that if needed.
+  // All the command failures will throw an exception which will be caught on the top-level and a message will be printed.
   runCommand(`upload ${doi} "../${fileName}"`, false);
-    // TODO: How does the user know this was successful?
+  // TODO: How does the user know this was successful?
+  console.log('Upload successfull.'); //This shoukd be good enough. User can always use --show or --open to see/open the record.
 }
 
 function zotzenGet(args) {
@@ -361,19 +368,31 @@ function zotzenGet(args) {
     zenodoRawItem = zenodoGetRaw(doi);
   }
 
-    // Need to do some input checking here? 
-    // TODO: What if zoteroItem.data.title is empty: Do not proceed.
-    // TODO: zoteroItem.data.abstractNote is <3 chars, this will be rejected. Solution: zoteroItem.data.abstractNote is <3 chars, then use string "To follow." instead.
-    // TODO: What if zoteroItem.data.creators is undefined? Then the Zenodo item has undefined in the authors.
-    // TODO: Also sync date
-    // TODO: If the zotero item has a URL, the append the following text to the description: "<new line><new line>Also see: <URL>"
+  if (!zoteroItem.data.title) {
+    console.log('Zotero item does not have title. Exiting...');
+    return;
+  }
+  if (
+    !zoteroItem.data.abstractNote ||
+    zoteroItem.data.abstractNote.length < 3
+  ) {
+    console.log('Zotero item abstract is less than 3 characters. Exiting...');
+    return;
+  }
+  if (!zoteroItem.data.creators.length) {
+    console.log('Zotero item does not have creators. Exiting...');
+    return;
+  }
   if (args.sync) {
     if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
       runCommandWithJsonFileInput(
         `update ${doi} --json `,
         {
           title: zoteroItem.data.title,
-          description: zoteroItem.data.abstractNote,
+          description:
+            zoteroItem.data.abstractNote +
+            (zoteroItem.data.url ? `\n\nAlso see: ${zoteroItem.data.url}` : ''),
+          publication_date: zoteroItem.data.date,
           creators: zoteroItem.data.creators.map((c) => {
             return { name: `${c.lastName}, ${c.firstName}` };
           }),
@@ -415,20 +434,29 @@ function zotzenGet(args) {
   if (args.show) {
     console.log('Zotero:');
     console.log(`- Item key: ${itemKey}`);
-      // TODO: Show authors and date
+    zoteroItem.data.creators.forEach((c) => {
+      console.log(
+        '-',
+        `${c.creatorType}:`,
+        c.name || c.firstName + ' ' + c.lastName
+      );
+    });
+    console.log(`- Date: ${zoteroItem.data.date}`);
     console.log(`- Title: ${zoteroItem.data.title}`);
     console.log(`- DOI: ${doi}`);
     console.log('');
 
-      // TODO: This needs to refetch the Zenodo item to show the updated title
-      // TODO: Question: Are we checking that the API transactions were successful?
     if (doi) {
+      zenodoRawItem = zenodoGetRaw(doi);
       console.log('Zenodo:');
       console.log('* Item available.');
       console.log(`* Item status: ${zenodoItem.status}`);
       console.log(`* Item is ${zenodoItem.writable} writable`);
-      console.log(`- Title: ${zenodoItem.title}`);
-      // TODO: Show authors and date
+      console.log(`- Title: ${zenodoRawItem.title}`);
+      zenodoRawItem.creators.forEach((c) => {
+        console.log(`- Author: ${c.name}`);
+      });
+      console.log(`- Publication date: ${zenodoRawItem.publication_date}`);
     }
   }
 
@@ -503,6 +531,7 @@ try {
   }
 } catch (ex) {
   console.log('Error: ', ex);
-    //  TODO: Only show the message if --debug is set.
-    // console.log(ex.message);
+  if (args.debug) {
+    console.log(ex.message);
+  }
 }
