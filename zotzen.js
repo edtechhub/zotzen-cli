@@ -4,6 +4,7 @@ const fs = require('fs');
 const opn = require('opn');
 const path = require('path');
 const prompt = require('prompt');
+const getPrompt = require('util').promisify(prompt.get).bind(prompt);
 
 const parser = new ArgumentParser({
   version: '1.0.0',
@@ -24,7 +25,7 @@ parser.addArgument('--json', {
 parser.addArgument('--group', {
   help: 'Group ID for which the new item Zotero is to be created (for --new).',
 });
-parser.addArgument('--zot', {
+parser.addArgument('zot', {
   help: 'Zotero id of the item group_id:item_key or item_key',
 });
 parser.addArgument('--show', {
@@ -275,7 +276,15 @@ function pushAttachment(key, fileName, doi, groupId) {
   console.log('Upload successfull.'); //This shoukd be good enough. User can always use --show or --open to see/open the record.
 }
 
-function zotzenGet(args) {
+function linked(zenodoItem, zoteroLink) {
+  return (
+    zenodoItem.related_identifiers &&
+    zenodoItem.related_identifiers.length >= 1 &&
+    zenodoItem.related_identifiers[0].identifier === zoteroLink
+  );
+}
+
+async function zotzenGet(args) {
   let groupId = null;
   let itemKey = null;
   let userId = null;
@@ -313,10 +322,9 @@ function zotzenGet(args) {
     !!groupId
   );
 
-  let zenodoRawItem = null;
+  let zenodoRawItem = doi && zenodoGetRaw(doi);
   if (args.getdoi) {
     if (doi) {
-      zenodoRawItem = zenodoGetRaw(doi);
       console.log(`Item has DOI already: ${doi}`);
       console.log(
         `Linked zotero record: `,
@@ -334,31 +342,43 @@ function zotzenGet(args) {
     }
   } else if (args.zen) {
     try {
-      zenodoRawItem = zenodoGetRaw(args.zen);
+      zenodoZenItem = zenodoGetRaw(args.zen);
     } catch (ex) {}
     if (doi) {
-      zenodoRawItem = zenodoGetRaw(doi);
       console.log(`Item has DOI already: ${doi}`);
       console.log(
         `Linked zotero record: `,
-        zenodoItem.related_identifiers[0].identifier
+        zenodoRawItem.related_identifiers[0].identifier
       );
-    } else if (!zenodoRawItem) {
+    } else if (!zenodoZenItem) {
       console.log(`Zenodo item with id ${args.zen} does not exist.`);
-    } else if (
-      zenodoRawItem.related_identifiers &&
-      zenodoRawItem.related_identifiers.length >= 1 &&
-      zenodoRawItem.related_identifiers[0].identifier !== zoteroSelectLink
-    ) {
+    } else if (!linked(zenodoZenItem, zoteroSelectLink)) {
       console.log(
         'Zenodo item is linked to a different Zotero item: ',
-        zenodoRawItem.related_identifiers[0].identifier
+        zenodoZenItem.related_identifiers[0].identifier
       );
     } else {
       const zenodoLinked = zenodoGet(args.zen);
       doi = zenodoLinked.doi;
       linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
       console.log(`DOI allocated: ${doi}`);
+    }
+  } else if (doi) {
+    if (linked(zenodoRawItem, zoteroSelectLink)) {
+      console.log('Item is already linked.');
+    } else {
+      const result = await getPrompt({
+        properties: {
+          Link: {
+            message: `Found doi: ${doi} not linked to zotero. Proceed? (y/N)`,
+            default: 'y',
+          },
+        },
+      });
+      if (result && (result.Link == 'y' || result.Link == 'Y')) {
+        console.log('Proceeding to link...');
+        linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
+      }
     }
   }
 
@@ -475,8 +495,6 @@ function zotzenGet(args) {
 try {
   if (args.new) {
     zotzenCreate(args);
-  } else if (args.zot) {
-    zotzenGet(args);
   } else if (args.install) {
     const schema = {
       properties: {
@@ -528,10 +546,11 @@ try {
         }
       }
     });
+  } else {
+    zotzenGet(args);
   }
 } catch (ex) {
-  console.log('Error: ', ex);
   if (args.debug) {
-    console.log(ex.message);
+    console.log(ex);
   }
 }
