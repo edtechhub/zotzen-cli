@@ -254,13 +254,18 @@ function syncErrors(doi, zenodoRawItem, zoteroSelectLink) {
 }
 
 function pushAttachment(key, fileName, doi, groupId) {
-  console.log(`Pushing ${fileName}`);
+  console.log(`Pushing from Zotero to Zenodo: ${fileName}`);
   runCommand(
     `${
       groupId ? '--group-id ' + groupId : ''
-    } attachment --key ${key} --save ../${fileName}`
+    } attachment --key ${key} --save "../${fileName}"`
   );
-  runCommand(`upload ${doi} ../${fileName}`, false);
+    // TODO: What is the above command fails?
+    // TODO: Also, I've inserted "..." in case the filename contains spaces. However, really the filename should be made shell-proof.
+    // In perl, you would say:
+    //                           use String::ShellQuote; $safefilename = shell_quote($filename);
+  runCommand(`upload ${doi} "../${fileName}"`, false);
+    // TODO: How does the user know this was successful?
 }
 
 function zotzenGet(args) {
@@ -356,12 +361,18 @@ function zotzenGet(args) {
     zenodoRawItem = zenodoGetRaw(doi);
   }
 
+    // Need to do some input checking here? 
+    // TODO: What if zoteroItem.data.title is empty: Do not proceed.
+    // TODO: zoteroItem.data.abstractNote is <3 chars, this will be rejected. Solution: zoteroItem.data.abstractNote is <3 chars, then use string "To follow." instead.
+    // TODO: What if zoteroItem.data.creators is undefined? Then the Zenodo item has undefined in the authors.
+    // TODO: Also sync date
+    // TODO: If the zotero item has a URL, the append the following text to the description: "<new line><new line>Also see: <URL>"
   if (args.sync) {
     if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
       runCommandWithJsonFileInput(
         `update ${doi} --json `,
         {
-          title: zoteroItem.data.tite,
+          title: zoteroItem.data.title,
           description: zoteroItem.data.abstractNote,
           creators: zoteroItem.data.creators.map((c) => {
             return { name: `${c.lastName}, ${c.firstName}` };
@@ -404,16 +415,20 @@ function zotzenGet(args) {
   if (args.show) {
     console.log('Zotero:');
     console.log(`- Item key: ${itemKey}`);
+      // TODO: Show authors and date
     console.log(`- Title: ${zoteroItem.data.title}`);
     console.log(`- DOI: ${doi}`);
     console.log('');
 
+      // TODO: This needs to refetch the Zenodo item to show the updated title
+      // TODO: Question: Are we checking that the API transactions were successful?
     if (doi) {
       console.log('Zenodo:');
-      console.log('- Item available.');
-      console.log(`- Item status: ${zenodoItem.status}`);
+      console.log('* Item available.');
+      console.log(`* Item status: ${zenodoItem.status}`);
+      console.log(`* Item is ${zenodoItem.writable} writable`);
       console.log(`- Title: ${zenodoItem.title}`);
-      console.log(`- Item is ${zenodoItem.writable} writable`);
+      // TODO: Show authors and date
     }
   }
 
@@ -488,5 +503,6 @@ try {
   }
 } catch (ex) {
   console.log('Error: ', ex);
-  console.log(ex.message);
+    //  TODO: Only show the message if --debug is set.
+    // console.log(ex.message);
 }
