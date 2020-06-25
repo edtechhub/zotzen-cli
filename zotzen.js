@@ -9,7 +9,7 @@ const getPrompt = require('util').promisify(prompt.get).bind(prompt);
 const parser = new ArgumentParser({
   version: '1.0.0',
   addHelp: true,
-  description: 'Zotzen utility. Main modes are --new or --zot.',
+  description: 'ZotZen utility. Main modes are --new or provide a Zotero item.',
 });
 
 parser.addArgument('--new', {
@@ -393,24 +393,28 @@ async function zotzenGet(args) {
     console.log('Zotero item does not have title. Exiting...');
     return;
   }
+  // This is useful is you just want the bare abstract.
+  var abstract = "";
   if (
     !zoteroItem.data.abstractNote ||
     zoteroItem.data.abstractNote.length < 3
   ) {
-    console.log('Zotero item abstract is less than 3 characters. Exiting...');
-    return;
+    //console.log('Zotero item abstract is less than 3 characters. Exiting...');
+    //return;
+    abstract = "No description available.";  
+  } else {
+    abstract = zoteroItem.data.abstractNote;
   }
-  if (!zoteroItem.data.creators.length) {
+  if (!zoteroItem.data.creators) {
     console.log('Zotero item does not have creators. Exiting...');
     return;
   }
+  abstract += (zoteroItem.data.url ? `\n\nAlso see: ${zoteroItem.data.url}` : ''); 
   if (args.sync) {
     if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
       let updateDoc = {
         title: zoteroItem.data.title,
-        description:
-          zoteroItem.data.abstractNote +
-          (zoteroItem.data.url ? `\n\nAlso see: ${zoteroItem.data.url}` : ''),
+        description: abstract,
         creators: zoteroItem.data.creators.map((c) => {
           return { name: `${c.lastName}, ${c.firstName}` };
         }),
