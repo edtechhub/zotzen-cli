@@ -406,20 +406,19 @@ async function zotzenGet(args) {
   }
   if (args.sync) {
     if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
-      runCommandWithJsonFileInput(
-        `update ${doi} --json `,
-        {
-          title: zoteroItem.data.title,
-          description:
-            zoteroItem.data.abstractNote +
-            (zoteroItem.data.url ? `\n\nAlso see: ${zoteroItem.data.url}` : ''),
-          publication_date: zoteroItem.data.date,
-          creators: zoteroItem.data.creators.map((c) => {
-            return { name: `${c.lastName}, ${c.firstName}` };
-          }),
-        },
-        false
-      );
+      let updateDoc = {
+        title: zoteroItem.data.title,
+        description:
+          zoteroItem.data.abstractNote +
+          (zoteroItem.data.url ? `\n\nAlso see: ${zoteroItem.data.url}` : ''),
+        creators: zoteroItem.data.creators.map((c) => {
+          return { name: `${c.lastName}, ${c.firstName}` };
+        }),
+      };
+      if (zoteroItem.data.date) {
+        updateDoc.publication_date = zoteroItem.data.date;
+      }
+      runCommandWithJsonFileInput(`update ${doi} --json `, updateDoc, false);
     }
   }
 
@@ -441,14 +440,18 @@ async function zotzenGet(args) {
           (a) => a.data.contentType === `application/${args.type}`
         );
       }
-      attachments.forEach((attachment) => {
-        pushAttachment(
-          attachment.data.key,
-          attachment.data.filename,
-          doi,
-          groupId
-        );
-      });
+      if (!attachments.length) {
+        console.log('No attachments found.');
+      } else {
+        attachments.forEach((attachment) => {
+          pushAttachment(
+            attachment.data.key,
+            attachment.data.filename,
+            doi,
+            groupId
+          );
+        });
+      }
     }
   }
 
