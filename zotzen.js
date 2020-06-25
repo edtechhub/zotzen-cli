@@ -59,7 +59,7 @@ parser.addArgument('--push', {
 parser.addArgument('--type', {
   action: 'store',
   help: 'Type of the attachments to be pushed.',
-  defaultValue: 'pdf',
+  defaultValue: 'all',
 });
 parser.addArgument('--publish', {
   action: 'storeTrue',
