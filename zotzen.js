@@ -401,6 +401,7 @@ async function zotzenGet(args) {
   ) {
     //console.log('Zotero item abstract is less than 3 characters. Exiting...');
     //return;
+    console.log('Zotero item abstract is less than 3 characters - using "No description available."');
     abstract = "No description available.";  
   } else {
     abstract = zoteroItem.data.abstractNote;
