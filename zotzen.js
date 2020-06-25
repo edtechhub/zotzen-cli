@@ -368,6 +368,9 @@ async function zotzenGet(args) {
     if (linked(zenodoRawItem, zoteroSelectLink)) {
       console.log('Item is already linked.');
     } else {
+      console.log(`Found doi: ${doi} not linked to zotero.
+ADD
+`);
       const result = await getPrompt({
         properties: {
           Link: {
