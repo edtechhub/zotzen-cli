@@ -394,29 +394,31 @@ async function zotzenGet(args) {
     return;
   }
   // This is useful is you just want the bare abstract.
-  var abstract = "";
+  var abstract = '';
   if (
     !zoteroItem.data.abstractNote ||
     zoteroItem.data.abstractNote.length < 3
   ) {
     //console.log('Zotero item abstract is less than 3 characters. Exiting...');
     //return;
-    abstract = "No description available.";  
+    abstract = 'No description available.';
   } else {
     abstract = zoteroItem.data.abstractNote;
   }
-  if (!zoteroItem.data.creators) {
+  if (!zoteroItem.data.creators || !zoteroItem.data.creators.length) {
     console.log('Zotero item does not have creators. Exiting...');
     return;
   }
-  abstract += (zoteroItem.data.url ? `\n\nAlso see: ${zoteroItem.data.url}` : ''); 
+  abstract += zoteroItem.data.url ? `\n\nAlso see: ${zoteroItem.data.url}` : '';
   if (args.sync) {
     if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
       let updateDoc = {
         title: zoteroItem.data.title,
         description: abstract,
         creators: zoteroItem.data.creators.map((c) => {
-          return { name: `${c.lastName}, ${c.firstName}` };
+          return {
+            name: `${c.name ? c.name : c.lastName + ',' + c.firstName}`,
+          };
         }),
       };
       if (zoteroItem.data.date) {
