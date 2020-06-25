@@ -442,8 +442,8 @@ async function zotzenGet(args) {
         (c) => c.data.itemType === 'attachment'
       );
       if (args.type !== 'all') {
-        attachments = attachments.filter(
-          (a) => a.data.contentType === `application/${args.type}`
+        attachments = attachments.filter((a) =>
+          a.data.filename.endsWith(args.type)
         );
       }
       if (!attachments.length) {
