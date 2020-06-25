@@ -27,6 +27,7 @@ parser.addArgument('--group', {
 });
 parser.addArgument('zot', {
   help: 'Zotero id of the item group_id:item_key or item_key',
+  nargs: '?',
 });
 parser.addArgument('--show', {
   action: 'storeTrue',
