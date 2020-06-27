@@ -115,6 +115,18 @@ As an alternative to `--title`, you can specify
 
 in which case the `record.json` will be used to generate the record on Zotero.
 
+### Typical work flow for existing Zotero items
+
+A typical work flow for existing items would be:
+```
+zotzen zotero://select/groups/2405685/items/55A44ZRB --show --sync
+zotzen zotero://select/groups/2405685/items/55A44ZRB --show --getdoi
+zotzen zotero://select/groups/2405685/items/55A44ZRB --show --sync
+zotzen zotero://select/groups/2405685/items/55A44ZRB --show --push
+zotzen zotero://select/groups/2405685/items/55A44ZRB --show --publish
+```
+The next few sections go through this in detail.
+
 ### Check an existing zotero item
 
 ```
