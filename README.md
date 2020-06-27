@@ -2,12 +2,34 @@
 
 A commandline tool to exchange data between Zotero and Zenodo, using the respective APIs. Developed by [@bjohas](https://github.com/bjohas) and [@a1diablo](https://github.com/a1diablo).
 
-Requires:
+Requires the following two tools (which are installed alongside):
 
 - zenodo-cli from https://github.com/bjohas/Zenodo-tools
 - zotero-cli from https://github.com/edtechhub/zotero-cli
 
-## Setup
+## Setup - Simple
+
+Run
+```
+sh install.sh
+```
+Enter your Zotero/Zenodo API credentials at the prompts and you are set.
+
+## Setup - in detail
+
+The script `install.sh` runs this
+```
+git submodule update --init --recursive
+cd zotero-cli
+npm install
+npm run build
+cd ..
+cd zenodo-cli
+pip3 install -r requirements.txt
+cd ..
+npm install
+node zotzen.js --install
+```
 
 After cloning this repository, pull the submodules
 
@@ -34,6 +56,10 @@ You need to have config files set up
 zotero-cli -> zotero-cli.toml
 zenodo-cli -> config.json
 ```
+which is done by running
+```
+node zotzen.js --install
+```
 
 Check whether you can log into both APIs, e.g. by running
 
@@ -43,6 +69,8 @@ zotero-cli ???
 ```
 
 ## Use of zotzen
+
+We're using `zotzen` as shorthand for `node zotzen.js`. You can set up a shortcut if you prefer.
 
 ### Create a new item on Zotero and Zenodo
 
@@ -90,7 +118,15 @@ in which case the `record.json` will be used to generate the record on Zotero.
 ### Check an existing zotero item
 
 ```
-zotzen --zot 123:ABC --show
+zotzen 2405685:55A44ZRB --show
+```
+For convenience you can also use, e.g.,
+```
+zotzen zotero://select/groups/2405685/items/55A44ZRB --show
+```
+or (if the group is set up in your config file)
+```
+zotzen 55A44ZRB --show
 ```
 
 The Zotero item with item key ABC is fetched (from group 123) and
@@ -117,7 +153,7 @@ Zenodo:
 ### Generate a DOI for an existing Zotero item
 
 ```
-zotzen --zot 123:ABC --getdoi [--template zenodo.json]
+zotzen 123:ABC --getdoi [--template zenodo.json]
 ```
 
 The Zotero item with item key ABC is fetched (from group 123) and
@@ -146,7 +182,7 @@ field). The Zotero item ID is written to the Zenodo record as above.
 ### Linking a Zotero item to an existing Zenodo item
 
 ```
-zotzen --zot 123:ABC --zen 567
+zotzen 123:ABC --zen 567
 ```
 
 The Zotero item with item key ABC is fetched (from group 123) and
@@ -165,7 +201,7 @@ the Zenodo item as above.
 ### Sync metadata from zotero to zenodo
 
 ```
-zotzen --zot 123:ABC --sync
+zotzen 123:ABC --sync
 ```
 
 - The zotero item metadata is retrieved (as with `--show`).
@@ -176,7 +212,7 @@ zotzen --zot 123:ABC --sync
 ### Push Zotero attachments to Zenodo.
 
 ```
-zotzen --zot 123:ABC --push [--types pdf|all]
+zotzen 123:ABC --push [--types pdf|all]
 ```
 
 The attachments to ABC are attached to the record
@@ -188,13 +224,13 @@ The attachments to ABC are attached to the record
 The options `--getdoi`, `--sync` and `--push` can be combined.
 
 ```
-zotzen --zot 123:ABC --getdoi --sync --push
+zotzen 123:ABC --getdoi --sync --push
 ```
 
 or
 
 ```
-zotzen --zot 123:ABC --zen 456 --sync --push
+zotzen 123:ABC --zen 456 --sync --push
 ```
 
 Also, publish the Zenodo record:
