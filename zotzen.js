@@ -85,6 +85,9 @@ const zenodoTmpFile = 'zenodo-cli/tmp';
 const zenodoCreateRecordTemplatePath = 'zenodo-cli/template.json';
 
 function runCommandWithJsonFileInput(command, json, zotero = true) {
+  if (args.debug) {
+      console.log('DEBUG: runCommandWithJsonFileInput');
+  };
   fs.writeFileSync(
     zotero ? zoteroTmpFile : zenodoTmpFile,
     JSON.stringify(json)
@@ -95,6 +98,9 @@ function runCommandWithJsonFileInput(command, json, zotero = true) {
 }
 
 function runCommand(command, zotero = true) {
+  if (args.debug) {
+      console.log('DEBUG: runCommand; '+command);
+  };
   try {
     return childProcess
       .execSync(`${zotero ? zoteroPrefix : zenodoPrefix} ${command}`, {
@@ -107,6 +113,9 @@ function runCommand(command, zotero = true) {
 }
 
 function parseFromZenodoResponse(content, key) {
+  if (args.debug) {
+      console.log('DEBUG: parseFromZenodoResponse');
+  };
   return content
     .substr(content.indexOf(`${key}:`))
     .split('\n')[0]
@@ -117,6 +126,9 @@ function parseFromZenodoResponse(content, key) {
 }
 
 function zoteroCreate(title, group, jsonFile = null) {
+  if (args.debug) {
+      console.log('DEBUG: zoteroCreate');
+  };
   if (jsonFile) {
     return JSON.parse(
       runCommand(
@@ -145,6 +157,9 @@ function zoteroCreate(title, group, jsonFile = null) {
 }
 
 function zenodoCreate(title, zoteroSelectLink, template) {
+  if (args.debug) {
+      console.log('DEBUG: zenodoCreate');
+  };
   template = template || zenodoCreateRecordTemplatePath;
   const zenodoTemplate = JSON.parse(fs.readFileSync(template).toString());
   zenodoTemplate.related_identifiers[0].identifier = zoteroSelectLink;
@@ -154,6 +169,9 @@ function zenodoCreate(title, zoteroSelectLink, template) {
 }
 
 function linkZotZen(zoteroKey, zenodoDoi, group, zoteroLink = null) {
+  if (args.debug) {
+      console.log('DEBUG: linkZotZen');
+  };
   runCommandWithJsonFileInput(
     `${group ? '--group-id ' + group : ''} update-item --key ${zoteroKey}`,
     {
@@ -167,6 +185,9 @@ function linkZotZen(zoteroKey, zenodoDoi, group, zoteroLink = null) {
 }
 
 function zotzenCreate(args) {
+  if (args.debug) {
+      console.log('DEBUG: zotzenCreate');
+  };
   const zoteroRecord = zoteroCreate(args.title, args.group, args.json);
   const zoteroSelectLink = zoteroRecord.successful[0].links.self.href.replace(
     zoteroApiPrefix,
@@ -201,6 +222,9 @@ function zotzenCreate(args) {
 }
 
 function zoteroGet(groupId, userId, itemKey) {
+  if (args.debug) {
+      console.log('DEBUG: zoteroGet');
+  };
   return JSON.parse(
     runCommand(
       `${groupId ? '--group-id ' + groupId : ''} ${
@@ -212,6 +236,9 @@ function zoteroGet(groupId, userId, itemKey) {
 }
 
 function zenodoGet(doi) {
+  if (args.debug) {
+      console.log('DEBUG: zenodoGet');
+  };
   const zenodoResponse = runCommand(`get ${doi} --show`, false);
   return {
     title: parseFromZenodoResponse(zenodoResponse, 'Title'),
@@ -226,16 +253,25 @@ function zenodoGet(doi) {
 }
 
 function zenodoGetRaw(doi) {
+  if (args.debug) {
+      console.log('DEBUG: zenodoGetRaw');
+  };
   runCommand(`get ${doi}`, false);
   const fileName = doi.split('.').pop();
   return JSON.parse(fs.readFileSync(`zenodo-cli/${fileName}.json`).toString());
 }
 
 function getZoteroSelectlink(id, key, group = false) {
+  if (args.debug) {
+      console.log('DEBUG: getZoteroSelectlink');
+  };
   return `zotero://select/${group ? 'groups' : 'users'}/${id}/items/${key}`;
 }
 
 function syncErrors(doi, zenodoRawItem, zoteroSelectLink) {
+  if (args.debug) {
+      console.log('DEBUG: syncErrors');
+  };
   let error = false;
   if (!doi) {
     console.log(
@@ -260,6 +296,9 @@ function syncErrors(doi, zenodoRawItem, zoteroSelectLink) {
 }
 
 function pushAttachment(key, fileName, doi, groupId) {
+  if (args.debug) {
+      console.log('DEBUG: pushAttachment');
+  };
   console.log(`Pushing from Zotero to Zenodo: ${fileName}`);
   runCommand(
     `${
@@ -278,6 +317,9 @@ function pushAttachment(key, fileName, doi, groupId) {
 }
 
 function linked(zenodoItem, zoteroLink) {
+  if (args.debug) {
+      console.log('DEBUG: linked');
+  };
   return (
     zenodoItem.related_identifiers &&
     zenodoItem.related_identifiers.length >= 1 &&
@@ -286,6 +328,9 @@ function linked(zenodoItem, zoteroLink) {
 }
 
 async function zotzenGet(args) {
+  if (args.debug) {
+      console.log('DEBUG: zotzenGet');
+  };
   let groupId = null;
   let itemKey = null;
   let userId = null;
@@ -325,6 +370,9 @@ async function zotzenGet(args) {
 
   let zenodoRawItem = doi && zenodoGetRaw(doi);
   if (args.getdoi) {
+    if (args.debug) {
+	  console.log('DEBUG: zotzenGet, getdoi');
+    };    
     if (doi) {
       console.log(`Item has DOI already: ${doi}`);
       console.log(
@@ -342,9 +390,16 @@ async function zotzenGet(args) {
       console.log(`DOI allocated: ${doi}`);
     }
   } else if (args.zen) {
+    if (args.debug) {
+	  console.log('DEBUG: zotzenGet, zen');
+    };    
     try {
       zenodoZenItem = zenodoGetRaw(args.zen);
-    } catch (ex) {}
+    } catch (ex) {
+	if (args.debug) {
+	    console.log('DEBUG: zotzenGet, exception zenodoGetRaw');
+	};    
+    }
     if (doi) {
       console.log(`Item has DOI already: ${doi}`);
       console.log(
@@ -509,8 +564,14 @@ Zenodo: ${zenodoRawItem.title}
 
 try {
   if (args.new) {
+    if (args.debug) {
+	  console.log('DEBUG: args.new');
+    };
     zotzenCreate(args);
   } else if (args.install) {
+    if (args.debug) {
+	  console.log('DEBUG: args.install');
+    };
     const schema = {
       properties: {
         'Zenodo API Key': {
@@ -556,7 +617,7 @@ try {
               `${zotGid ? 'group-id="' + zotGid + '"\n' : ''}`
           );
           console.log(
-            'Zetoro config wrote successfully to zotero-cli/zotero-cli.toml'
+            'Zotero config wrote successfully to zotero-cli/zotero-cli.toml'
           );
         }
       }
@@ -565,6 +626,9 @@ try {
     zotzenGet(args);
   }
 } catch (ex) {
+  if (args.debug) {
+      console.log('DEBUG: ERROR');
+  };
   if (args.debug) {
     console.log(ex);
   }
