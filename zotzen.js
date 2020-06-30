@@ -160,7 +160,7 @@ function zoteroCreate(title, group, jsonFile = null) {
   );
 }
 
-function zenodoCreate(title, zoteroSelectLink, template) {
+function zenodoCreate(title, creators, zoteroSelectLink, template) {
   if (args.debug) {
     console.log('DEBUG: zenodoCreate');
   }
@@ -169,6 +169,7 @@ function zenodoCreate(title, zoteroSelectLink, template) {
   zenodoTemplate.related_identifiers[0].identifier = zoteroSelectLink;
   if (!zenodoTemplate.title) zenodoTemplate.title = title;
   if (!zenodoTemplate.description) zenodoTemplate.description = title;
+  if (creators) zenodoTemplate.creators = creators;
   return runCommandWithJsonFileInput('create --show', zenodoTemplate, false);
 }
 
@@ -386,6 +387,12 @@ async function zotzenGet(args) {
     } else {
       const zenodoRecord = zenodoCreate(
         zoteroItem.data.title,
+        zoteroItem.data.creators &&
+          zoteroItem.data.creators.map((c) => {
+            return {
+              name: `${c.name ? c.name : c.lastName + ', ' + c.firstName}`,
+            };
+          }),
         zoteroSelectLink,
         args.template
       );
