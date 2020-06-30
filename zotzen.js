@@ -73,6 +73,10 @@ parser.addArgument('--debug', {
   action: 'storeTrue',
   help: 'Enable debug logging',
 });
+parser.addArgument('--link', {
+  action: 'storeTrue',
+  help: 'Link the zotero item to the zenodo record in the DOI.',
+});
 
 const args = parser.parseArgs();
 
@@ -419,14 +423,21 @@ async function zotzenGet(args) {
       linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
       console.log(`DOI allocated: ${doi}`);
     }
-  } else if (doi) {
-    if (linked(zenodoRawItem, zoteroSelectLink)) {
+  } else if (args.sync || args.push || args.publish || args.link) {
+    if (!doi) {
+      console.log('No doi present in the zotero item.');
+    } else if (linked(zenodoRawItem, zoteroSelectLink)) {
       console.log('Item is already linked.');
+    } else if (
+      zenodoRawItem.related_identifiers &&
+      zenodoRawItem.related_identifiers.length >= 1 &&
+      args.link
+    ) {
+      linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
     } else {
-      console.log(`Found doi: ${doi} not linked to zotero.
-Zotero: ${zoteroItem.data.title}
-Zenodo: ${zenodoRawItem.title}
-`);
+      console.log(
+        `Found doi: ${doi} not linked to zotero. Zotero: ${zoteroItem.data.title} Zenodo: ${zenodoRawItem.title} `
+      );
       const result = await getPrompt({
         properties: {
           Link: {
