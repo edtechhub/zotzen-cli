@@ -359,11 +359,15 @@ async function zotzenGet(args) {
 
   const zoteroItem = zoteroGet(groupId, userId, itemKey);
   let doi = null;
-  const doiRegex = new RegExp(/10\.5281\/zenodo\.[0-9]+/);
-  if (zoteroItem.data.extra) {
-    const match = zoteroItem.data.extra.match(doiRegex);
-    if (match) {
-      doi = match[0];
+  if (zoteroItem.data.DOI) {
+    doi = zoteroItem.data.DOI;
+  } else {
+    const doiRegex = new RegExp(/10\.5281\/zenodo\.[0-9]+/);
+    if (zoteroItem.data.extra) {
+      const match = zoteroItem.data.extra.match(doiRegex);
+      if (match) {
+        doi = match[0];
+      }
     }
   }
 
