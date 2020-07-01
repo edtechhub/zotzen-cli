@@ -523,11 +523,14 @@ async function zotzenGet(args) {
         )
       );
       let attachments = children.filter(
-        (c) => c.data.itemType === 'attachment'
+        (c) =>
+          c.data.itemType === 'attachment' &&
+          c.data.linkMode === 'imported_file'
       );
-      if (args.type !== 'all') {
+      const attachmentType = args.type.toLowerCase();
+      if (attachmentType !== 'all') {
         attachments = attachments.filter((a) =>
-          a.data.filename.endsWith(args.type)
+          a.data.filename.endsWith(attachmentType)
         );
       }
       if (!attachments.length) {
