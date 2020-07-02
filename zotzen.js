@@ -570,9 +570,10 @@ async function zotzenGet(args) {
       console.log(`* Item status: ${zenodoItem.status}`);
       console.log(`* Item is ${zenodoItem.writable} writable`);
       console.log(`- Title: ${zenodoRawItem.title}`);
-      zenodoRawItem.creators.forEach((c) => {
-        console.log(`- Author: ${c.name}`);
-      });
+      zenodoRawItem.creators &&
+        zenodoRawItem.creators.forEach((c) => {
+          console.log(`- Author: ${c.name}`);
+        });
       console.log(`- Publication date: ${zenodoRawItem.publication_date}`);
     }
   }
@@ -650,7 +651,11 @@ try {
       }
     });
   } else {
-    zotzenGet(args);
+    zotzenGet(args).catch((ex) => {
+      if (args.debug) {
+        console.log(ex);
+      }
+    });
   }
 } catch (ex) {
   if (args.debug) {
