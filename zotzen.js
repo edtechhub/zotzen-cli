@@ -109,9 +109,13 @@ function runCommand(command, zotero = true) {
     return childProcess
       .execSync(`${zotero ? zoteroPrefix : zenodoPrefix} ${command}`, {
         cwd: `${zotero ? 'zotero' : 'zenodo'}-cli`,
+        stdio: [],
       })
       .toString();
   } catch (ex) {
+    try {
+      return JSON.parse(ex.stderr.toString());
+    } catch (_) {}
     throw new Error(`${zotero ? 'Zotero' : 'Zenodo'}: ${ex.output.toString()}`);
   }
 }
@@ -300,7 +304,7 @@ function syncErrors(doi, zenodoRawItem, zoteroSelectLink) {
   return error;
 }
 
-function pushAttachment(key, fileName, doi, groupId) {
+function pushAttachment(itemKey, key, fileName, doi, groupId, userId) {
   if (args.debug) {
     console.log('DEBUG: pushAttachment');
   }
@@ -316,9 +320,30 @@ function pushAttachment(key, fileName, doi, groupId) {
   //                           use String::ShellQuote; $safefilename = shell_quote($filename);
   // There's no built-in for escaping. We can only escape special characters. We can do that if needed.
   // All the command failures will throw an exception which will be caught on the top-level and a message will be printed.
-  runCommand(`upload ${doi} "../${fileName}"`, false);
+  const pushResult = runCommand(`upload ${doi} "../${fileName}"`, false);
+  if (pushResult.status === 403) {
+    console.log(pushResult.message);
+    console.log('Creating new version.');
+    const newVersionResponse = runCommand(`newversion ${doi}`, false);
+    doi = doi.replace(
+      /zenodo.*/,
+      `zenodo.${
+        parseFromZenodoResponse(newVersionResponse, 'latest_draft')
+          .split('/')
+          .slice(-1)[0]
+      }`
+    );
+    linkZotZen(
+      itemKey,
+      doi,
+      groupId,
+      getZoteroSelectlink(userId || groupId, itemKey, !!groupId)
+    );
+    runCommand(`upload ${doi} "../${fileName}"`, false);
+  }
   // TODO: How does the user know this was successful?
   console.log('Upload successfull.'); //This shoukd be good enough. User can always use --show or --open to see/open the record.
+  return doi;
 }
 
 function linked(zenodoItem, zoteroLink) {
@@ -537,11 +562,13 @@ async function zotzenGet(args) {
         console.log('No attachments found.');
       } else {
         attachments.forEach((attachment) => {
-          pushAttachment(
+          doi = pushAttachment(
+            itemKey,
             attachment.data.key,
             attachment.data.filename,
             doi,
-            groupId
+            groupId,
+            userId
           );
         });
       }
