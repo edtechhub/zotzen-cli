@@ -575,6 +575,10 @@ async function zotzenGet(args) {
     }
   }
 
+  if (args.publish && doi) {
+    runCommand(`get ${doi} --publish`, false);
+  }
+
   if (args.show) {
     console.log('Zotero:');
     console.log(`- Item key: ${itemKey}`);
@@ -592,6 +596,7 @@ async function zotzenGet(args) {
 
     if (doi) {
       zenodoRawItem = zenodoGetRaw(doi);
+      zenodoItem = zenodoGet(doi);
       console.log('Zenodo:');
       console.log('* Item available.');
       console.log(`* Item status: ${zenodoItem.status}`);
@@ -603,10 +608,6 @@ async function zotzenGet(args) {
         });
       console.log(`- Publication date: ${zenodoRawItem.publication_date}`);
     }
-  }
-
-  if (args.publish && doi) {
-    runCommand(`get ${doi} --publish`, false);
   }
 
   if (args.open) {
