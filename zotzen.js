@@ -27,7 +27,7 @@ parser.addArgument('--group', {
 });
 parser.addArgument('zot', {
   help: 'Zotero id of the item group_id:item_key or item_key',
-  nargs: '?',
+  nargs: '*',
 });
 parser.addArgument('--show', {
   action: 'storeTrue',
@@ -361,261 +361,273 @@ async function zotzenGet(args) {
   if (args.debug) {
     console.log('DEBUG: zotzenGet');
   }
-  let groupId = null;
-  let itemKey = null;
-  let userId = null;
-  if (args.zot.includes('zotero')) {
-    const selectLink = args.zot.split('/');
-    if (selectLink.length < 7) {
-      throw new Error('Invalid zotero select link specified');
-    }
-    if (selectLink[3] == 'users') {
-      userId = selectLink[4];
-    } else {
-      groupId = selectLink[4];
-    }
-    itemKey = selectLink[6];
-  } else if (args.zot.includes(':')) {
-    groupId = args.zot.split(':')[0];
-    itemKey = args.zot.split(':')[1];
-  } else {
-    itemKey = args.zot;
-  }
 
-  const zoteroItem = zoteroGet(groupId, userId, itemKey);
-  let doi = null;
-  if (zoteroItem.data.DOI) {
-    doi = zoteroItem.data.DOI;
-  } else {
-    const doiRegex = new RegExp(/10\.5281\/zenodo\.[0-9]+/);
-    if (zoteroItem.data.extra) {
-      const match = zoteroItem.data.extra.match(doiRegex);
-      if (match) {
-        doi = match[0];
-      }
-    }
-  }
-
-  const zoteroSelectLink = getZoteroSelectlink(
-    groupId || userId,
-    itemKey,
-    !!groupId
-  );
-
-  let zenodoRawItem = doi && zenodoGetRaw(doi);
-  if (args.getdoi) {
-    if (args.debug) {
-      console.log('DEBUG: zotzenGet, getdoi');
-    }
-    if (doi) {
-      console.log(`Item has DOI already: ${doi}`);
-      console.log(
-        `Linked zotero record: `,
-        zenodoRawItem.related_identifiers[0].identifier
-      );
-    } else {
-      const zenodoRecord = zenodoCreate(
-        zoteroItem.data.title,
-        zoteroItem.data.creators &&
-          zoteroItem.data.creators.map((c) => {
-            return {
-              name: `${c.name ? c.name : c.lastName + ', ' + c.firstName}`,
-            };
-          }),
-        zoteroSelectLink,
-        args.template
-      );
-      doi = parseFromZenodoResponse(zenodoRecord, 'DOI');
-      linkZotZen(itemKey, doi, groupId);
-      console.log(`DOI allocated: ${doi}`);
-    }
-  } else if (args.zen) {
-    if (args.debug) {
-      console.log('DEBUG: zotzenGet, zen');
-    }
-    try {
-      zenodoZenItem = zenodoGetRaw(args.zen);
-    } catch (ex) {
-      if (args.debug) {
-        console.log('DEBUG: zotzenGet, exception zenodoGetRaw');
-      }
-    }
-    if (doi) {
-      console.log(`Item has DOI already: ${doi}`);
-      console.log(
-        `Linked zotero record: `,
-        zenodoRawItem.related_identifiers[0].identifier
-      );
-    } else if (!zenodoZenItem) {
-      console.log(`Zenodo item with id ${args.zen} does not exist.`);
-    } else if (!linked(zenodoZenItem, zoteroSelectLink)) {
-      console.log(
-        'Zenodo item is linked to a different Zotero item: ',
-        zenodoZenItem.related_identifiers[0].identifier
-      );
-    } else {
-      const zenodoLinked = zenodoGet(args.zen);
-      doi = zenodoLinked.doi;
-      linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
-      console.log(`DOI allocated: ${doi}`);
-    }
-  } else if (args.sync || args.push || args.publish || args.link) {
-    if (!doi) {
-      console.log('No doi present in the zotero item.');
-    } else if (linked(zenodoRawItem, zoteroSelectLink)) {
-      console.log('Item is already linked.');
-    } else if (
-      zenodoRawItem.related_identifiers &&
-      zenodoRawItem.related_identifiers.length >= 1 &&
-      args.link
-    ) {
-      linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
-    } else {
-      console.log(
-        `Found doi: ${doi} not linked to zotero. Zotero: ${zoteroItem.data.title} Zenodo: ${zenodoRawItem.title} `
-      );
-      const result = await getPrompt({
-        properties: {
-          Link: {
-            message: `Found doi: ${doi} not linked to zotero. Proceed? (y/N)`,
-            default: 'y',
-          },
-        },
-      });
-      if (result && (result.Link == 'y' || result.Link == 'Y')) {
-        console.log('Proceeding to link...');
-        linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
-      }
-    }
-  }
-
-  let zenodoItem = null;
-  if (doi) {
-    zenodoItem = zenodoGet(doi);
-    zenodoRawItem = zenodoGetRaw(doi);
-  }
-
-  if (!zoteroItem.data.title) {
-    console.log('Zotero item does not have title. Exiting...');
-    return;
-  }
-  // This is useful is you just want the bare abstract.
-  var abstract = '';
-  if (
-    !zoteroItem.data.abstractNote ||
-    zoteroItem.data.abstractNote.length < 3
-  ) {
-    //console.log('Zotero item abstract is less than 3 characters. Exiting...');
-    //return;
-    console.log(
-      'Zotero item abstract is less than 3 characters - using "No description available."'
-    );
-    abstract = 'No description available.';
-  } else {
-    abstract = zoteroItem.data.abstractNote;
-  }
-  if (!zoteroItem.data.creators || !zoteroItem.data.creators.length) {
-    console.log('Zotero item does not have creators. Exiting...');
-    return;
-  }
-  abstract += zoteroItem.data.url ? `\n\nAlso see: ${zoteroItem.data.url}` : '';
-  if (args.sync) {
-    if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
-      let updateDoc = {
-        title: zoteroItem.data.title,
-        description: abstract,
-        creators: zoteroItem.data.creators.map((c) => {
-          return {
-            name: `${c.name ? c.name : c.lastName + ', ' + c.firstName}`,
-          };
-        }),
-      };
-      if (zoteroItem.data.date) {
-        updateDoc.publication_date = zoteroItem.data.date;
-      }
-      runCommandWithJsonFileInput(`update ${doi} --json `, updateDoc, false);
-    }
-  }
-
-  if (args.push) {
-    if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
-      const children = JSON.parse(
-        runCommand(
-          `${
-            groupId ? '--group-id ' + groupId : ''
-          } get /items/${itemKey}/children`,
-          true
-        )
-      );
-      let attachments = children.filter(
-        (c) =>
-          c.data.itemType === 'attachment' &&
-          c.data.linkMode === 'imported_file'
-      );
-      const attachmentType = args.type.toLowerCase();
-      if (attachmentType !== 'all') {
-        attachments = attachments.filter((a) =>
-          a.data.filename.endsWith(attachmentType)
-        );
-      }
-      if (!attachments.length) {
-        console.log('No attachments found.');
+  await Promise.all(
+    args.zot.map(async (zot) => {
+      let groupId = null;
+      let itemKey = null;
+      let userId = null;
+      if (zot.includes('zotero')) {
+        const selectLink = zot.split('/');
+        if (selectLink.length < 7) {
+          throw new Error('Invalid zotero select link specified');
+        }
+        if (selectLink[3] == 'users') {
+          userId = selectLink[4];
+        } else {
+          groupId = selectLink[4];
+        }
+        itemKey = selectLink[6];
+      } else if (zot.includes(':')) {
+        groupId = zot.split(':')[0];
+        itemKey = zot.split(':')[1];
       } else {
-        attachments.forEach((attachment) => {
-          doi = pushAttachment(
-            itemKey,
-            attachment.data.key,
-            attachment.data.filename,
-            doi,
-            groupId,
-            userId
+        itemKey = zot;
+      }
+
+      const zoteroItem = zoteroGet(groupId, userId, itemKey);
+      let doi = null;
+      if (zoteroItem.data.DOI) {
+        doi = zoteroItem.data.DOI;
+      } else {
+        const doiRegex = new RegExp(/10\.5281\/zenodo\.[0-9]+/);
+        if (zoteroItem.data.extra) {
+          const match = zoteroItem.data.extra.match(doiRegex);
+          if (match) {
+            doi = match[0];
+          }
+        }
+      }
+
+      const zoteroSelectLink = getZoteroSelectlink(
+        groupId || userId,
+        itemKey,
+        !!groupId
+      );
+
+      let zenodoRawItem = doi && zenodoGetRaw(doi);
+      if (args.getdoi) {
+        if (args.debug) {
+          console.log('DEBUG: zotzenGet, getdoi');
+        }
+        if (doi) {
+          console.log(`Item has DOI already: ${doi}`);
+          console.log(
+            `Linked zotero record: `,
+            zenodoRawItem.related_identifiers[0].identifier
+          );
+        } else {
+          const zenodoRecord = zenodoCreate(
+            zoteroItem.data.title,
+            zoteroItem.data.creators &&
+              zoteroItem.data.creators.map((c) => {
+                return {
+                  name: `${c.name ? c.name : c.lastName + ', ' + c.firstName}`,
+                };
+              }),
+            zoteroSelectLink,
+            args.template
+          );
+          doi = parseFromZenodoResponse(zenodoRecord, 'DOI');
+          linkZotZen(itemKey, doi, groupId);
+          console.log(`DOI allocated: ${doi}`);
+        }
+      } else if (args.zen) {
+        if (args.debug) {
+          console.log('DEBUG: zotzenGet, zen');
+        }
+        try {
+          zenodoZenItem = zenodoGetRaw(args.zen);
+        } catch (ex) {
+          if (args.debug) {
+            console.log('DEBUG: zotzenGet, exception zenodoGetRaw');
+          }
+        }
+        if (doi) {
+          console.log(`Item has DOI already: ${doi}`);
+          console.log(
+            `Linked zotero record: `,
+            zenodoRawItem.related_identifiers[0].identifier
+          );
+        } else if (!zenodoZenItem) {
+          console.log(`Zenodo item with id ${args.zen} does not exist.`);
+        } else if (!linked(zenodoZenItem, zoteroSelectLink)) {
+          console.log(
+            'Zenodo item is linked to a different Zotero item: ',
+            zenodoZenItem.related_identifiers[0].identifier
+          );
+        } else {
+          const zenodoLinked = zenodoGet(args.zen);
+          doi = zenodoLinked.doi;
+          linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
+          console.log(`DOI allocated: ${doi}`);
+        }
+      } else if (args.sync || args.push || args.publish || args.link) {
+        if (!doi) {
+          console.log('No doi present in the zotero item.');
+        } else if (linked(zenodoRawItem, zoteroSelectLink)) {
+          console.log('Item is already linked.');
+        } else if (
+          zenodoRawItem.related_identifiers &&
+          zenodoRawItem.related_identifiers.length >= 1 &&
+          args.link
+        ) {
+          linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
+        } else {
+          console.log(
+            `Found doi: ${doi} not linked to zotero. Zotero: ${zoteroItem.data.title} Zenodo: ${zenodoRawItem.title} `
+          );
+          const result = await getPrompt({
+            properties: {
+              Link: {
+                message: `Found doi: ${doi} not linked to zotero. Proceed? (y/N)`,
+                default: 'y',
+              },
+            },
+          });
+          if (result && (result.Link == 'y' || result.Link == 'Y')) {
+            console.log('Proceeding to link...');
+            linkZotZen(itemKey, doi, groupId, zoteroSelectLink);
+          }
+        }
+      }
+
+      let zenodoItem = null;
+      if (doi) {
+        zenodoItem = zenodoGet(doi);
+        zenodoRawItem = zenodoGetRaw(doi);
+      }
+
+      if (!zoteroItem.data.title) {
+        console.log('Zotero item does not have title. Exiting...');
+        return;
+      }
+      // This is useful is you just want the bare abstract.
+      var abstract = '';
+      if (
+        !zoteroItem.data.abstractNote ||
+        zoteroItem.data.abstractNote.length < 3
+      ) {
+        //console.log('Zotero item abstract is less than 3 characters. Exiting...');
+        //return;
+        console.log(
+          'Zotero item abstract is less than 3 characters - using "No description available."'
+        );
+        abstract = 'No description available.';
+      } else {
+        abstract = zoteroItem.data.abstractNote;
+      }
+      if (!zoteroItem.data.creators || !zoteroItem.data.creators.length) {
+        console.log('Zotero item does not have creators. Exiting...');
+        return;
+      }
+      abstract += zoteroItem.data.url
+        ? `\n\nAlso see: ${zoteroItem.data.url}`
+        : '';
+      if (args.sync) {
+        if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
+          let updateDoc = {
+            title: zoteroItem.data.title,
+            description: abstract,
+            creators: zoteroItem.data.creators.map((c) => {
+              return {
+                name: `${c.name ? c.name : c.lastName + ', ' + c.firstName}`,
+              };
+            }),
+          };
+          if (zoteroItem.data.date) {
+            updateDoc.publication_date = zoteroItem.data.date;
+          }
+          runCommandWithJsonFileInput(
+            `update ${doi} --json `,
+            updateDoc,
+            false
+          );
+        }
+      }
+
+      if (args.push) {
+        if (!syncErrors(doi, zenodoRawItem, zoteroSelectLink)) {
+          const children = JSON.parse(
+            runCommand(
+              `${
+                groupId ? '--group-id ' + groupId : ''
+              } get /items/${itemKey}/children`,
+              true
+            )
+          );
+          let attachments = children.filter(
+            (c) =>
+              c.data.itemType === 'attachment' &&
+              c.data.linkMode === 'imported_file'
+          );
+          const attachmentType = args.type.toLowerCase();
+          if (attachmentType !== 'all') {
+            attachments = attachments.filter((a) =>
+              a.data.filename.endsWith(attachmentType)
+            );
+          }
+          if (!attachments.length) {
+            console.log('No attachments found.');
+          } else {
+            attachments.forEach((attachment) => {
+              doi = pushAttachment(
+                itemKey,
+                attachment.data.key,
+                attachment.data.filename,
+                doi,
+                groupId,
+                userId
+              );
+            });
+          }
+        }
+      }
+
+      if (args.publish && doi) {
+        runCommand(`get ${doi} --publish`, false);
+      }
+
+      if (args.show) {
+        console.log('Zotero:');
+        console.log(`- Item key: ${itemKey}`);
+        zoteroItem.data.creators.forEach((c) => {
+          console.log(
+            '-',
+            `${c.creatorType}:`,
+            c.name || c.firstName + ' ' + c.lastName
           );
         });
+        console.log(`- Date: ${zoteroItem.data.date}`);
+        console.log(`- Title: ${zoteroItem.data.title}`);
+        console.log(`- DOI: ${doi}`);
+        console.log('');
+
+        if (doi) {
+          zenodoRawItem = zenodoGetRaw(doi);
+          zenodoItem = zenodoGet(doi);
+          console.log('Zenodo:');
+          console.log('* Item available.');
+          console.log(`* Item status: ${zenodoItem.status}`);
+          console.log(`* Item is ${zenodoItem.writable} writable`);
+          console.log(`- Title: ${zenodoRawItem.title}`);
+          zenodoRawItem.creators &&
+            zenodoRawItem.creators.forEach((c) => {
+              console.log(`- Author: ${c.name}`);
+            });
+          console.log(`- Publication date: ${zenodoRawItem.publication_date}`);
+          console.log('');
+        }
       }
-    }
-  }
 
-  if (args.publish && doi) {
-    runCommand(`get ${doi} --publish`, false);
-  }
-
-  if (args.show) {
-    console.log('Zotero:');
-    console.log(`- Item key: ${itemKey}`);
-    zoteroItem.data.creators.forEach((c) => {
-      console.log(
-        '-',
-        `${c.creatorType}:`,
-        c.name || c.firstName + ' ' + c.lastName
-      );
-    });
-    console.log(`- Date: ${zoteroItem.data.date}`);
-    console.log(`- Title: ${zoteroItem.data.title}`);
-    console.log(`- DOI: ${doi}`);
-    console.log('');
-
-    if (doi) {
-      zenodoRawItem = zenodoGetRaw(doi);
-      zenodoItem = zenodoGet(doi);
-      console.log('Zenodo:');
-      console.log('* Item available.');
-      console.log(`* Item status: ${zenodoItem.status}`);
-      console.log(`* Item is ${zenodoItem.writable} writable`);
-      console.log(`- Title: ${zenodoRawItem.title}`);
-      zenodoRawItem.creators &&
-        zenodoRawItem.creators.forEach((c) => {
-          console.log(`- Author: ${c.name}`);
-        });
-      console.log(`- Publication date: ${zenodoRawItem.publication_date}`);
-    }
-  }
-
-  if (args.open) {
-    opn(zoteroSelectLink);
-    if (zenodoItem) {
-      opn(zenodoItem.url);
-    }
-  }
+      if (args.open) {
+        opn(zoteroSelectLink);
+        if (zenodoItem) {
+          opn(zenodoItem.url);
+        }
+      }
+    })
+  );
 }
 
 try {
