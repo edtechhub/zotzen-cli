@@ -205,6 +205,7 @@ function zotzenCreate(args) {
 
   const zenodoRecord = zenodoCreate(
     zoteroRecord.successful[0].data.title,
+    zoteroRecord.successful[0].data.creators,
     zoteroSelectLink
   );
   const doi = parseFromZenodoResponse(zenodoRecord, 'DOI');
