@@ -341,6 +341,7 @@ function pushAttachment(itemKey, key, fileName, doi, groupId, userId) {
     );
     runCommand(`upload ${doi} "../${fileName}"`, false);
   }
+  fs.unlinkSync(fileName);
   // TODO: How does the user know this was successful?
   console.log('Upload successfull.'); //This shoukd be good enough. User can always use --show or --open to see/open the record.
   return doi;
